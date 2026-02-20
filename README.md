@@ -7,6 +7,7 @@ Continuously pulls CVEs from the last 10 days, filters likely agentic AI vulnera
 - Pulls CVEs from NVD (2.0 API)
 - Keeps a rolling 10-day window
 - Filters for likely AI agent / LLM ecosystem issues
+- Correlates findings with MITRE ATLAS and MITRE ATT&CK via explainable rules
 - Generates:
   - machine-readable JSON lines
   - per-CVE Markdown documentation
@@ -54,6 +55,14 @@ Then open `http://127.0.0.1:8080`.
 - Architecture and flow: `docs/APP_OVERVIEW.md`
 - Setup/operations/troubleshooting: `docs/RUNBOOK.md`
 
+## MITRE mappings
+
+- Rule files:
+  - `mappings/atlas_rules.json`
+  - `mappings/attack_rules.json`
+- Correlator implementation:
+  - `cve_agent/correlator.py`
+
 ## Configuration
 
 Use `.env` or environment variables:
@@ -67,12 +76,12 @@ Use `.env` or environment variables:
 
 ## Output structure
 
-- `output/findings.jsonl`: all discovered findings
-- `output/reports/CVE-YYYY-NNNN.md`: per-CVE remediation report
+- `output/findings.jsonl`: all discovered findings (now includes `atlas_matches` and `attack_matches`)
+- `output/reports/CVE-YYYY-NNNN.md`: per-CVE remediation report with MITRE section
 - `output/state.json`: seen CVE tracking for deduplication
 
 ## Notes
 
 - This tool identifies likely agentic AI issues using keyword/risk heuristics.
 - Always confirm patch guidance with vendor advisories and official fix releases.
-- For strongest signal quality, tune `AI_KEYWORDS` and category rules in `cve_agent/analyzer.py` for your environment.
+- For strongest signal quality, tune `AI_KEYWORDS`, `CATEGORY_RULES`, and mapping rules for your environment.

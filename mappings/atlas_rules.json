@@ -1,0 +1,34 @@
+﻿[
+  {
+    "technique_id": "AML.T0051",
+    "technique_name": "Prompt Injection",
+    "tactic": "Initial Access",
+    "tags": ["prompt_injection"],
+    "keywords": ["prompt injection", "system prompt"],
+    "cwes": ["CWE-74", "CWE-94"]
+  },
+  {
+    "technique_id": "AML.T0018",
+    "technique_name": "LLM Plugin Abuse",
+    "tactic": "Execution",
+    "tags": ["unsafe_tool_execution", "agent"],
+    "keywords": ["plugin", "tool calling", "function calling", "agent"],
+    "cwes": ["CWE-862", "CWE-269", "CWE-918"]
+  },
+  {
+    "technique_id": "AML.T0043",
+    "technique_name": "Data Exfiltration via Retrieval",
+    "tactic": "Exfiltration",
+    "tags": ["data_exfiltration", "rag"],
+    "keywords": ["retrieval", "vector database", "exfiltration", "rag"],
+    "cwes": ["CWE-200", "CWE-201", "CWE-125"]
+  },
+  {
+    "technique_id": "AML.T0024",
+    "technique_name": "Model/Runtime Escape",
+    "tactic": "Privilege Escalation",
+    "tags": ["authz_or_isolation", "sandbox"],
+    "keywords": ["sandbox escape", "container escape", "isolation"],
+    "cwes": ["CWE-284", "CWE-693"]
+  }
+]

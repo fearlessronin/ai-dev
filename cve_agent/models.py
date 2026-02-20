@@ -18,6 +18,17 @@ class CVEItem:
 
 
 @dataclass
+class MitreMatch:
+    framework: str
+    technique_id: str
+    technique_name: str
+    tactic: str
+    confidence: str
+    score: float
+    reasons: list[str] = field(default_factory=list)
+
+
+@dataclass
 class AnalysisResult:
     cve: CVEItem
     confidence: float
@@ -26,3 +37,6 @@ class AnalysisResult:
     summary: str
     remediation: str
     code_examples: dict[str, str]
+    atlas_matches: list[MitreMatch] = field(default_factory=list)
+    attack_matches: list[MitreMatch] = field(default_factory=list)
+    correlation_summary: str = "No MITRE correlations yet."

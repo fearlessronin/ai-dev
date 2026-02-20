@@ -2,8 +2,9 @@
 
 import json
 from pathlib import Path
+from typing import Any
 
-from .models import AnalysisResult
+from .models import AnalysisResult, MitreMatch
 
 
 class Reporter:
@@ -32,6 +33,9 @@ class Reporter:
             "cwes": finding.cve.cwes,
             "cvss_v31_base": finding.cve.cvss_v31_base,
             "cvss_v31_vector": finding.cve.cvss_v31_vector,
+            "atlas_matches": self._serialize_matches(finding.atlas_matches),
+            "attack_matches": self._serialize_matches(finding.attack_matches),
+            "correlation_summary": finding.correlation_summary,
         }
         with self.jsonl_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(payload, ensure_ascii=False) + "\n")
@@ -42,6 +46,8 @@ class Reporter:
 
         refs = "\n".join(f"- {url}" for url in cve.references) if cve.references else "- None"
         cwes = ", ".join(cve.cwes) if cve.cwes else "N/A"
+        atlas_lines = self._format_match_lines(finding.atlas_matches)
+        attack_lines = self._format_match_lines(finding.attack_matches)
 
         content = f"""# {cve.cve_id}
 
@@ -57,6 +63,15 @@ class Reporter:
 - CWE: {cwes}
 - CVSS v3.1 Base Score: {cve.cvss_v31_base if cve.cvss_v31_base is not None else 'N/A'}
 - CVSS v3.1 Vector: {cve.cvss_v31_vector or 'N/A'}
+
+## MITRE Correlation
+- Summary: {finding.correlation_summary}
+
+### MITRE ATLAS Matches
+{atlas_lines}
+
+### MITRE ATT&CK Matches
+{attack_lines}
 
 ## Description
 {cve.description or 'No description provided by source.'}
@@ -78,3 +93,29 @@ class Reporter:
 {refs}
 """
         target.write_text(content, encoding="utf-8")
+
+    def _serialize_matches(self, matches: list[MitreMatch]) -> list[dict[str, Any]]:
+        return [
+            {
+                "framework": m.framework,
+                "technique_id": m.technique_id,
+                "technique_name": m.technique_name,
+                "tactic": m.tactic,
+                "confidence": m.confidence,
+                "score": m.score,
+                "reasons": m.reasons,
+            }
+            for m in matches
+        ]
+
+    def _format_match_lines(self, matches: list[MitreMatch]) -> str:
+        if not matches:
+            return "- None"
+
+        lines = []
+        for m in matches:
+            reasons = "; ".join(m.reasons) if m.reasons else "No reason provided"
+            lines.append(
+                f"- {m.technique_id} ({m.technique_name}) | tactic={m.tactic} | confidence={m.confidence} | reason={reasons}"
+            )
+        return "\n".join(lines)

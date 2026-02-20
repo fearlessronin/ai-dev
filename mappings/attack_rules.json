@@ -1,0 +1,34 @@
+﻿[
+  {
+    "technique_id": "T1190",
+    "technique_name": "Exploit Public-Facing Application",
+    "tactic": "Initial Access",
+    "tags": ["unsafe_tool_execution", "prompt_injection"],
+    "keywords": ["remote", "api", "injection", "ssrf"],
+    "cwes": ["CWE-918", "CWE-79", "CWE-89"]
+  },
+  {
+    "technique_id": "T1210",
+    "technique_name": "Exploitation of Remote Services",
+    "tactic": "Lateral Movement",
+    "tags": ["unsafe_tool_execution"],
+    "keywords": ["remote service", "rpc", "network call", "ssrf"],
+    "cwes": ["CWE-306", "CWE-862", "CWE-918"]
+  },
+  {
+    "technique_id": "T1041",
+    "technique_name": "Exfiltration Over C2 Channel",
+    "tactic": "Exfiltration",
+    "tags": ["data_exfiltration"],
+    "keywords": ["data leak", "exfiltration", "retrieval"],
+    "cwes": ["CWE-200", "CWE-201"]
+  },
+  {
+    "technique_id": "T1068",
+    "technique_name": "Exploitation for Privilege Escalation",
+    "tactic": "Privilege Escalation",
+    "tags": ["authz_or_isolation"],
+    "keywords": ["privilege", "authorization bypass", "sandbox escape"],
+    "cwes": ["CWE-269", "CWE-284"]
+  }
+]

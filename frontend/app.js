@@ -11,10 +11,17 @@ const el = {
   category: document.getElementById("category"),
   confidence: document.getElementById("confidence"),
   confidenceValue: document.getElementById("confidence-value"),
+  hasAtlas: document.getElementById("has-atlas"),
+  hasAttack: document.getElementById("has-attack"),
+  highMitre: document.getElementById("high-mitre"),
   refresh: document.getElementById("refresh"),
   detailTitle: document.getElementById("detail-title"),
   detailMeta: document.getElementById("detail-meta"),
   detailContent: document.getElementById("detail-content"),
+  mitrePanel: document.getElementById("mitre-panel"),
+  mitreSummary: document.getElementById("mitre-summary"),
+  atlasList: document.getElementById("atlas-list"),
+  attackList: document.getElementById("attack-list"),
   viewRadar: document.getElementById("view-radar"),
   viewDocs: document.getElementById("view-docs"),
   viewTabs: document.querySelectorAll(".view-tab"),
@@ -25,6 +32,11 @@ const el = {
 
 function fmt(n) {
   return Number(n || 0).toFixed(2);
+}
+
+function hasHighMitre(f) {
+  const all = [...(f.atlas_matches || []), ...(f.attack_matches || [])];
+  return all.some((m) => m.confidence === "high");
 }
 
 async function loadFindings() {
@@ -58,22 +70,32 @@ function applyFilters() {
   const q = el.search.value.trim().toLowerCase();
   const minConfidence = Number(el.confidence.value);
   const category = el.category.value;
+  const mustHaveAtlas = el.hasAtlas.checked;
+  const mustHaveAttack = el.hasAttack.checked;
+  const mustBeHighMitre = el.highMitre.checked;
 
   state.filtered = state.findings.filter((f) => {
     const confidenceOk = Number(f.confidence || 0) >= minConfidence;
     const categoryOk = !category || (f.categories || []).includes(category);
+    const atlasOk = !mustHaveAtlas || (f.atlas_matches || []).length > 0;
+    const attackOk = !mustHaveAttack || (f.attack_matches || []).length > 0;
+    const highMitreOk = !mustBeHighMitre || hasHighMitre(f);
+
     const blob = [
       f.cve_id,
       ...(f.matched_keywords || []),
       ...(f.cwes || []),
       ...(f.categories || []),
+      ...(f.atlas_matches || []).map((m) => m.technique_id),
+      ...(f.attack_matches || []).map((m) => m.technique_id),
       f.summary,
+      f.correlation_summary,
     ]
       .join(" ")
       .toLowerCase();
 
     const queryOk = !q || blob.includes(q);
-    return confidenceOk && categoryOk && queryOk;
+    return confidenceOk && categoryOk && atlasOk && attackOk && highMitreOk && queryOk;
   });
 
   renderCards();
@@ -82,13 +104,13 @@ function applyFilters() {
 function renderStats() {
   const total = state.findings.length;
   const high = state.findings.filter((f) => Number(f.confidence || 0) >= 0.75).length;
-  const avg = total
-    ? state.findings.reduce((s, f) => s + Number(f.confidence || 0), 0) / total
-    : 0;
+  const atlasLinked = state.findings.filter((f) => (f.atlas_matches || []).length > 0).length;
+  const attackLinked = state.findings.filter((f) => (f.attack_matches || []).length > 0).length;
   el.stats.innerHTML = `
     <span class="stat">Findings: ${total}</span>
     <span class="stat">High-confidence: ${high}</span>
-    <span class="stat">Avg confidence: ${fmt(avg)}</span>
+    <span class="stat">ATLAS linked: ${atlasLinked}</span>
+    <span class="stat">ATT&CK linked: ${attackLinked}</span>
   `;
 }
 
@@ -108,15 +130,37 @@ function renderCards() {
       <p>${f.summary || "No summary"}</p>
       <div class="badges">
         <span class="badge">confidence ${fmt(f.confidence)}</span>
-        ${(f.categories || [])
-          .slice(0, 2)
-          .map((c) => `<span class="badge">${c}</span>`)
-          .join("")}
+        <span class="badge">ATLAS ${(f.atlas_matches || []).length}</span>
+        <span class="badge">ATT&CK ${(f.attack_matches || []).length}</span>
       </div>
     `;
     card.addEventListener("click", () => selectFinding(f));
     el.cards.appendChild(card);
   });
+}
+
+function renderMitreList(target, matches) {
+  target.innerHTML = "";
+  if (!matches || !matches.length) {
+    target.innerHTML = "<li>None</li>";
+    return;
+  }
+
+  for (const m of matches) {
+    const li = document.createElement("li");
+    li.textContent = `${m.technique_id} ${m.technique_name} (${m.confidence})`;
+    target.appendChild(li);
+  }
+}
+
+function renderMitrePanel(f) {
+  const hasData = (f.atlas_matches || []).length > 0 || (f.attack_matches || []).length > 0;
+  el.mitrePanel.classList.toggle("hidden", !hasData);
+  if (!hasData) return;
+
+  el.mitreSummary.textContent = f.correlation_summary || "No MITRE correlation summary available.";
+  renderMitreList(el.atlasList, f.atlas_matches || []);
+  renderMitreList(el.attackList, f.attack_matches || []);
 }
 
 async function selectFinding(f) {
@@ -127,6 +171,7 @@ async function selectFinding(f) {
   el.detailMeta.textContent = `Published: ${f.published || "N/A"} | Confidence: ${fmt(
     f.confidence,
   )} | Categories: ${(f.categories || []).join(", ")}`;
+  renderMitrePanel(f);
   el.detailContent.textContent = "Loading report...";
 
   try {
@@ -176,6 +221,9 @@ function bindEvents() {
     el.confidenceValue.textContent = fmt(el.confidence.value);
     applyFilters();
   });
+  el.hasAtlas.addEventListener("change", applyFilters);
+  el.hasAttack.addEventListener("change", applyFilters);
+  el.highMitre.addEventListener("change", applyFilters);
   el.refresh.addEventListener("click", async () => {
     await loadFindings();
   });
