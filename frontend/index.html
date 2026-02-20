@@ -1,0 +1,84 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agentic AI CVE Radar</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/assets/styles.css?v=20260220" />
+  </head>
+  <body>
+    <div class="bg-glow bg-glow-a"></div>
+    <div class="bg-glow bg-glow-b"></div>
+
+    <header class="hero">
+      <div class="hero__meta">Live Security Intelligence</div>
+      <h1>Agentic AI CVE Radar</h1>
+      <p>Track the last 10 days of likely AI-agent vulnerabilities with remediation-focused documentation.</p>
+      <div class="hero__stats" id="stats"></div>
+    </header>
+
+    <nav class="view-tabs" aria-label="Primary views">
+      <button class="view-tab active" data-view="radar">Radar</button>
+      <button class="view-tab" data-view="docs">Docs</button>
+    </nav>
+
+    <section id="view-radar">
+      <main class="layout">
+        <aside class="panel filters">
+          <h2>Filters</h2>
+          <label>
+            Search
+            <input id="search" type="text" placeholder="CVE id, keyword, CWE" />
+          </label>
+
+          <label>
+            Category
+            <select id="category">
+              <option value="">All</option>
+            </select>
+          </label>
+
+          <label>
+            Min Confidence
+            <input id="confidence" type="range" min="0" max="1" step="0.05" value="0" />
+            <span id="confidence-value">0.00</span>
+          </label>
+        </aside>
+
+        <section class="panel feed">
+          <div class="feed__header">
+            <h2>Recent Findings</h2>
+            <button id="refresh">Refresh</button>
+          </div>
+          <div id="cards" class="cards"></div>
+        </section>
+
+        <section class="panel detail">
+          <h2 id="detail-title">Select a CVE</h2>
+          <div id="detail-meta" class="detail__meta"></div>
+          <article id="detail-content" class="detail__content">
+            Choose a finding from the list to view remediation context.
+          </article>
+        </section>
+      </main>
+    </section>
+
+    <section id="view-docs" class="hidden docs-layout">
+      <aside class="panel docs-nav">
+        <h2>Documentation</h2>
+        <button class="doc-link active" data-doc="runbook">How To Use</button>
+        <button class="doc-link" data-doc="overview">Architecture</button>
+      </aside>
+      <article class="panel docs-content">
+        <h2 id="doc-title">How To Use</h2>
+        <pre id="doc-body">Loading documentation...</pre>
+      </article>
+    </section>
+
+    <script src="/assets/app.js?v=20260220"></script>
+  </body>
+</html>
+
