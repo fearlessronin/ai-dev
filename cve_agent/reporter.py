@@ -36,6 +36,14 @@ class Reporter:
             "atlas_matches": self._serialize_matches(finding.atlas_matches),
             "attack_matches": self._serialize_matches(finding.attack_matches),
             "correlation_summary": finding.correlation_summary,
+            "kev_status": finding.kev_status,
+            "kev_date_added": finding.kev_date_added,
+            "kev_due_date": finding.kev_due_date,
+            "kev_required_action": finding.kev_required_action,
+            "epss_score": finding.epss_score,
+            "epss_percentile": finding.epss_percentile,
+            "priority_score": finding.priority_score,
+            "priority_reason": finding.priority_reason,
         }
         with self.jsonl_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(payload, ensure_ascii=False) + "\n")
@@ -63,6 +71,15 @@ class Reporter:
 - CWE: {cwes}
 - CVSS v3.1 Base Score: {cve.cvss_v31_base if cve.cvss_v31_base is not None else 'N/A'}
 - CVSS v3.1 Vector: {cve.cvss_v31_vector or 'N/A'}
+
+## Operational Risk Signals
+- Priority score: {finding.priority_score:.2f}
+- Priority rationale: {finding.priority_reason or 'N/A'}
+- KEV listed: {'Yes' if finding.kev_status else 'No'}
+- KEV date added: {finding.kev_date_added or 'N/A'}
+- KEV due date: {finding.kev_due_date or 'N/A'}
+- EPSS score: {finding.epss_score if finding.epss_score is not None else 'N/A'}
+- EPSS percentile: {finding.epss_percentile if finding.epss_percentile is not None else 'N/A'}
 
 ## MITRE Correlation
 - Summary: {finding.correlation_summary}

@@ -314,3 +314,28 @@ button {
 @keyframes reveal {
   to { opacity: 1; transform: translateY(0); }
 }
+
+.stat-button {
+  width: auto;
+  cursor: pointer;
+}
+
+.stat-button.active {
+  background: var(--teal);
+  color: #fff;
+  border-color: var(--teal);
+}
+
+.tech-line {
+  margin: 0.35rem 0 0;
+  color: #516467;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.75rem;
+}
+
+.reset-filters {
+  margin-top: 0.3rem;
+  background: #f2e2cc;
+  border: 1px solid #d5c0a3;
+  cursor: pointer;
+}

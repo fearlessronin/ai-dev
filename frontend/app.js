@@ -2,6 +2,7 @@
   findings: [],
   filtered: [],
   selectedId: null,
+  statFilter: "",
 };
 
 const el = {
@@ -9,11 +10,16 @@ const el = {
   stats: document.getElementById("stats"),
   search: document.getElementById("search"),
   category: document.getElementById("category"),
+  sortBy: document.getElementById("sort-by"),
   confidence: document.getElementById("confidence"),
   confidenceValue: document.getElementById("confidence-value"),
+  epssMin: document.getElementById("epss-min"),
+  epssMinValue: document.getElementById("epss-min-value"),
+  hasKev: document.getElementById("has-kev"),
   hasAtlas: document.getElementById("has-atlas"),
   hasAttack: document.getElementById("has-attack"),
   highMitre: document.getElementById("high-mitre"),
+  resetFilters: document.getElementById("reset-filters"),
   refresh: document.getElementById("refresh"),
   detailTitle: document.getElementById("detail-title"),
   detailMeta: document.getElementById("detail-meta"),
@@ -34,9 +40,38 @@ function fmt(n) {
   return Number(n || 0).toFixed(2);
 }
 
+function parseDate(value) {
+  const t = Date.parse(value || "");
+  return Number.isNaN(t) ? 0 : t;
+}
+
 function hasHighMitre(f) {
   const all = [...(f.atlas_matches || []), ...(f.attack_matches || [])];
   return all.some((m) => m.confidence === "high");
+}
+
+function techniquePreview(matches) {
+  if (!matches || !matches.length) return "none";
+  return matches
+    .slice(0, 2)
+    .map((m) => m.technique_id)
+    .join(", ");
+}
+
+function sortFindings(list) {
+  const mode = el.sortBy.value;
+
+  const sorted = [...list];
+  if (mode === "published") {
+    sorted.sort((a, b) => parseDate(b.published) - parseDate(a.published));
+  } else if (mode === "confidence") {
+    sorted.sort((a, b) => Number(b.confidence || 0) - Number(a.confidence || 0));
+  } else if (mode === "epss") {
+    sorted.sort((a, b) => Number(b.epss_score || 0) - Number(a.epss_score || 0));
+  } else {
+    sorted.sort((a, b) => Number(b.priority_score || 0) - Number(a.priority_score || 0));
+  }
+  return sorted;
 }
 
 async function loadFindings() {
@@ -69,17 +104,28 @@ function populateCategoryOptions() {
 function applyFilters() {
   const q = el.search.value.trim().toLowerCase();
   const minConfidence = Number(el.confidence.value);
+  const minEpss = Number(el.epssMin.value);
   const category = el.category.value;
+  const mustHaveKev = el.hasKev.checked;
   const mustHaveAtlas = el.hasAtlas.checked;
   const mustHaveAttack = el.hasAttack.checked;
   const mustBeHighMitre = el.highMitre.checked;
+  const statFilter = state.statFilter;
 
-  state.filtered = state.findings.filter((f) => {
+  const filtered = state.findings.filter((f) => {
     const confidenceOk = Number(f.confidence || 0) >= minConfidence;
+    const epssOk = Number(f.epss_score || 0) >= minEpss;
     const categoryOk = !category || (f.categories || []).includes(category);
+    const kevOk = !mustHaveKev || Boolean(f.kev_status);
     const atlasOk = !mustHaveAtlas || (f.atlas_matches || []).length > 0;
     const attackOk = !mustHaveAttack || (f.attack_matches || []).length > 0;
     const highMitreOk = !mustBeHighMitre || hasHighMitre(f);
+    const statOk =
+      !statFilter ||
+      (statFilter === "high" && Number(f.confidence || 0) >= 0.75) ||
+      (statFilter === "atlas" && (f.atlas_matches || []).length > 0) ||
+      (statFilter === "attack" && (f.attack_matches || []).length > 0) ||
+      (statFilter === "kev" && Boolean(f.kev_status));
 
     const blob = [
       f.cve_id,
@@ -90,27 +136,31 @@ function applyFilters() {
       ...(f.attack_matches || []).map((m) => m.technique_id),
       f.summary,
       f.correlation_summary,
+      f.priority_reason,
     ]
       .join(" ")
       .toLowerCase();
 
     const queryOk = !q || blob.includes(q);
-    return confidenceOk && categoryOk && atlasOk && attackOk && highMitreOk && queryOk;
+    return confidenceOk && epssOk && categoryOk && kevOk && atlasOk && attackOk && highMitreOk && statOk && queryOk;
   });
 
+  state.filtered = sortFindings(filtered);
   renderCards();
 }
 
 function renderStats() {
   const total = state.findings.length;
   const high = state.findings.filter((f) => Number(f.confidence || 0) >= 0.75).length;
+  const kevLinked = state.findings.filter((f) => Boolean(f.kev_status)).length;
   const atlasLinked = state.findings.filter((f) => (f.atlas_matches || []).length > 0).length;
   const attackLinked = state.findings.filter((f) => (f.attack_matches || []).length > 0).length;
   el.stats.innerHTML = `
-    <span class="stat">Findings: ${total}</span>
-    <span class="stat">High-confidence: ${high}</span>
-    <span class="stat">ATLAS linked: ${atlasLinked}</span>
-    <span class="stat">ATT&CK linked: ${attackLinked}</span>
+    <button class="stat stat-button ${state.statFilter === "" ? "active" : ""}" data-stat-filter="all">Findings: ${total}</button>
+    <button class="stat stat-button ${state.statFilter === "high" ? "active" : ""}" data-stat-filter="high">High-confidence: ${high}</button>
+    <button class="stat stat-button ${state.statFilter === "kev" ? "active" : ""}" data-stat-filter="kev">KEV linked: ${kevLinked}</button>
+    <button class="stat stat-button ${state.statFilter === "atlas" ? "active" : ""}" data-stat-filter="atlas">ATLAS linked: ${atlasLinked}</button>
+    <button class="stat stat-button ${state.statFilter === "attack" ? "active" : ""}" data-stat-filter="attack">ATT&CK linked: ${attackLinked}</button>
   `;
 }
 
@@ -129,10 +179,13 @@ function renderCards() {
       <h3>${f.cve_id}</h3>
       <p>${f.summary || "No summary"}</p>
       <div class="badges">
+        <span class="badge">priority ${fmt(f.priority_score)}</span>
         <span class="badge">confidence ${fmt(f.confidence)}</span>
-        <span class="badge">ATLAS ${(f.atlas_matches || []).length}</span>
-        <span class="badge">ATT&CK ${(f.attack_matches || []).length}</span>
+        <span class="badge">EPSS ${fmt(f.epss_score)}</span>
+        <span class="badge">KEV ${f.kev_status ? "yes" : "no"}</span>
       </div>
+      <p class="tech-line">ATLAS: ${techniquePreview(f.atlas_matches)}</p>
+      <p class="tech-line">ATT&CK: ${techniquePreview(f.attack_matches)}</p>
     `;
     card.addEventListener("click", () => selectFinding(f));
     el.cards.appendChild(card);
@@ -168,9 +221,9 @@ async function selectFinding(f) {
   renderCards();
 
   el.detailTitle.textContent = f.cve_id;
-  el.detailMeta.textContent = `Published: ${f.published || "N/A"} | Confidence: ${fmt(
-    f.confidence,
-  )} | Categories: ${(f.categories || []).join(", ")}`;
+  el.detailMeta.textContent =
+    `Published: ${f.published || "N/A"} | Priority: ${fmt(f.priority_score)} | ` +
+    `EPSS: ${fmt(f.epss_score)} | KEV: ${f.kev_status ? "Yes" : "No"}`;
   renderMitrePanel(f);
   el.detailContent.textContent = "Loading report...";
 
@@ -217,15 +270,57 @@ async function loadDoc(docId, title) {
 function bindEvents() {
   el.search.addEventListener("input", applyFilters);
   el.category.addEventListener("change", applyFilters);
+  el.sortBy.addEventListener("change", applyFilters);
+
   el.confidence.addEventListener("input", () => {
     el.confidenceValue.textContent = fmt(el.confidence.value);
     applyFilters();
   });
+
+  el.epssMin.addEventListener("input", () => {
+    el.epssMinValue.textContent = fmt(el.epssMin.value);
+    applyFilters();
+  });
+
+  el.hasKev.addEventListener("change", applyFilters);
   el.hasAtlas.addEventListener("change", applyFilters);
   el.hasAttack.addEventListener("change", applyFilters);
   el.highMitre.addEventListener("change", applyFilters);
+
   el.refresh.addEventListener("click", async () => {
     await loadFindings();
+  });
+
+  el.resetFilters.addEventListener("click", () => {
+    el.search.value = "";
+    el.category.value = "";
+    el.sortBy.value = "priority";
+    el.confidence.value = "0";
+    el.confidenceValue.textContent = fmt(0);
+    el.epssMin.value = "0";
+    el.epssMinValue.textContent = fmt(0);
+    el.hasKev.checked = false;
+    el.hasAtlas.checked = false;
+    el.hasAttack.checked = false;
+    el.highMitre.checked = false;
+    state.statFilter = "";
+    renderStats();
+    applyFilters();
+  });
+
+  el.stats.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const stat = target.dataset.statFilter;
+    if (!stat) return;
+
+    if (stat === "all") {
+      state.statFilter = "";
+    } else {
+      state.statFilter = state.statFilter === stat ? "" : stat;
+    }
+    renderStats();
+    applyFilters();
   });
 
   el.viewTabs.forEach((button) => {
@@ -247,6 +342,7 @@ function bindEvents() {
 (async function init() {
   bindEvents();
   el.confidenceValue.textContent = fmt(el.confidence.value);
+  el.epssMinValue.textContent = fmt(el.epssMin.value);
   switchView("radar");
   await loadFindings();
   await loadDoc("runbook", "How To Use");

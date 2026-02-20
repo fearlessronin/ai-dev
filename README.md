@@ -8,6 +8,10 @@ Continuously pulls CVEs from the last 10 days, filters likely agentic AI vulnera
 - Keeps a rolling 10-day window
 - Filters for likely AI agent / LLM ecosystem issues
 - Correlates findings with MITRE ATLAS and MITRE ATT&CK via explainable rules
+- Enriches findings with:
+  - CISA KEV exploitation status
+  - FIRST EPSS exploit probability
+  - composite priority score
 - Generates:
   - machine-readable JSON lines
   - per-CVE Markdown documentation
@@ -55,13 +59,17 @@ Then open `http://127.0.0.1:8080`.
 - Architecture and flow: `docs/APP_OVERVIEW.md`
 - Setup/operations/troubleshooting: `docs/RUNBOOK.md`
 
-## MITRE mappings
+## Correlation and enrichment
 
-- Rule files:
+- MITRE rule files:
   - `mappings/atlas_rules.json`
   - `mappings/attack_rules.json`
-- Correlator implementation:
+- MITRE correlator:
   - `cve_agent/correlator.py`
+- Phase 1 enrichment:
+  - `cve_agent/sources/kev.py`
+  - `cve_agent/sources/epss.py`
+  - `cve_agent/enrichment.py`
 
 ## Configuration
 
@@ -76,8 +84,8 @@ Use `.env` or environment variables:
 
 ## Output structure
 
-- `output/findings.jsonl`: all discovered findings (now includes `atlas_matches` and `attack_matches`)
-- `output/reports/CVE-YYYY-NNNN.md`: per-CVE remediation report with MITRE section
+- `output/findings.jsonl`: includes MITRE + KEV + EPSS + `priority_score`
+- `output/reports/CVE-YYYY-NNNN.md`: remediation report with operational risk section
 - `output/state.json`: seen CVE tracking for deduplication
 
 ## Notes
