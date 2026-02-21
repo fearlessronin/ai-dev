@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/styles.css?v=20260220e" />
+    <link rel="stylesheet" href="/assets/styles.css?v=20260221b" />
   </head>
   <body>
     <div class="bg-glow bg-glow-a"></div>
@@ -49,6 +49,17 @@
           </label>
 
           <label>
+            Triage State
+            <select id="triage-state">
+              <option value="">All</option>
+              <option value="new">new</option>
+              <option value="investigating">investigating</option>
+              <option value="mitigated">mitigated</option>
+              <option value="accepted_risk">accepted_risk</option>
+            </select>
+          </label>
+
+          <label>
             Sort By
             <select id="sort-by">
               <option value="priority">Priority</option>
@@ -70,11 +81,19 @@
             <span id="epss-min-value">0.00</span>
           </label>
 
+          <label>
+            Min Evidence
+            <input id="evidence-min" type="range" min="0" max="1" step="0.01" value="0" />
+            <span id="evidence-min-value">0.00</span>
+          </label>
+
           <button id="reset-filters" class="reset-filters">Reset Filters</button>
 
           <div class="check-group">
             <label><input type="checkbox" id="has-kev" /> KEV listed only</label>
             <label><input type="checkbox" id="has-fix" /> Has fix version</label>
+            <label><input type="checkbox" id="in-scope" /> In target scope</label>
+            <label><input type="checkbox" id="has-contradiction" /> Has contradictions</label>
             <label><input type="checkbox" id="has-atlas" /> Has ATLAS match</label>
             <label><input type="checkbox" id="has-attack" /> Has ATT&CK match</label>
             <label><input type="checkbox" id="high-mitre" /> High-confidence MITRE only</label>
@@ -84,7 +103,10 @@
         <section class="panel feed">
           <div class="feed__header">
             <h2>Recent Findings</h2>
-            <button id="refresh">Refresh</button>
+            <div>
+              <button id="export-csv">Export CSV</button>
+              <button id="refresh">Refresh</button>
+            </div>
           </div>
           <div id="cards" class="cards"></div>
         </section>
@@ -92,6 +114,25 @@
         <section class="panel detail">
           <h2 id="detail-title">Select a CVE</h2>
           <div id="detail-meta" class="detail__meta"></div>
+
+          <section class="triage-box">
+            <h3>Triage</h3>
+            <label>
+              State
+              <select id="triage-edit-state">
+                <option value="new">new</option>
+                <option value="investigating">investigating</option>
+                <option value="mitigated">mitigated</option>
+                <option value="accepted_risk">accepted_risk</option>
+              </select>
+            </label>
+            <label>
+              Note
+              <textarea id="triage-edit-note" rows="3" placeholder="Add analyst note"></textarea>
+            </label>
+            <button id="triage-save">Save Triage</button>
+          </section>
+
           <section id="mitre-panel" class="mitre-panel hidden">
             <h3>MITRE Correlation</h3>
             <p id="mitre-summary" class="mitre-summary"></p>
@@ -125,7 +166,6 @@
       </article>
     </section>
 
-    <script src="/assets/app.js?v=20260220e"></script>
+    <script src="/assets/app.js?v=20260221b"></script>
   </body>
 </html>
-

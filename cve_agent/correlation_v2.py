@@ -9,6 +9,8 @@ def apply_phase3_correlation(
     epss_entry: dict | None,
     cveorg_entry: dict | None,
     osv_entry: dict | None,
+    target_ecosystems: list[str] | None = None,
+    target_packages: list[str] | None = None,
 ) -> AnalysisResult:
     score = 0.0
     evidence: list[str] = []
@@ -53,6 +55,18 @@ def apply_phase3_correlation(
         score += 0.1
         evidence.append("Product/package naming overlap across sources")
 
+    in_scope, scope_reason = _asset_scope(
+        ecosystems=analysis.ecosystems,
+        packages=analysis.packages,
+        target_ecosystems=target_ecosystems or [],
+        target_packages=target_packages or [],
+    )
+    analysis.asset_in_scope = in_scope
+    analysis.asset_scope_reason = scope_reason
+    if in_scope:
+        score += 0.15
+        evidence.append(f"In target asset scope ({scope_reason})")
+
     if contradictions:
         score = max(0.0, score - 0.1)
 
@@ -72,6 +86,30 @@ def apply_phase3_correlation(
         )
 
     return analysis
+
+
+def _asset_scope(
+    ecosystems: list[str],
+    packages: list[str],
+    target_ecosystems: list[str],
+    target_packages: list[str],
+) -> tuple[bool, str]:
+    eco_targets = {x.strip().lower() for x in target_ecosystems if x.strip()}
+    pkg_targets = {x.strip().lower() for x in target_packages if x.strip()}
+    if not eco_targets and not pkg_targets:
+        return False, ""
+
+    eco_matches = sorted({e for e in ecosystems if e.strip().lower() in eco_targets})
+    pkg_matches = sorted({p for p in packages if p.strip().lower() in pkg_targets})
+    if not eco_matches and not pkg_matches:
+        return False, ""
+
+    reasons: list[str] = []
+    if eco_matches:
+        reasons.append(f"ecosystems={', '.join(eco_matches[:3])}")
+    if pkg_matches:
+        reasons.append(f"packages={', '.join(pkg_matches[:3])}")
+    return True, "; ".join(reasons)
 
 
 def _extract_cveorg_fixed_versions(entry: dict | None) -> set[str]:

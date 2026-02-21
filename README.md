@@ -1,11 +1,11 @@
 ﻿# AI CVE Watcher
 
-Continuously pulls CVEs from the last 10 days, filters likely agentic AI vulnerabilities, and generates remediation-focused documentation with code guidance.
+Continuously pulls CVEs from the configured lookback window, filters likely agentic AI vulnerabilities, and generates remediation-focused documentation with code guidance.
 
 ## What it does
 
 - Pulls CVEs from NVD (2.0 API)
-- Keeps a rolling 10-day window
+- Keeps a configurable rolling window (`WINDOW_DAYS`)
 - Filters for likely AI agent / LLM ecosystem issues
 - Correlates findings with MITRE ATLAS and MITRE ATT&CK via explainable rules
 - Enriches findings with:
@@ -81,11 +81,15 @@ Then open `http://127.0.0.1:8080`.
 Use `.env` or environment variables:
 
 - `NVD_API_KEY`: optional API key for higher NVD throughput
-- `WINDOW_DAYS`: lookback window (default: `10`)
+- `WINDOW_DAYS`: lookback window (default: `30`)
 - `POLL_INTERVAL_MINUTES`: daemon poll interval (default: `60`)
 - `OUTPUT_DIR`: output directory (default: `output`)
 - `STATE_FILE`: state file (default: `output/state.json`)
 - `LOG_LEVEL`: logging level (default: `INFO`)
+- `SOURCE_CACHE_TTL_MINUTES`: source cache TTL in minutes (default: `15`)
+- `TARGET_ECOSYSTEMS`: comma-separated ecosystem names for in-scope boosting
+- `TARGET_PACKAGES`: comma-separated package names for in-scope boosting
+- `REPROCESS_SEEN`: reprocess seen CVEs to detect change types (default: `false`)
 
 ## Output structure
 
@@ -98,3 +102,6 @@ Use `.env` or environment variables:
 - This tool identifies likely agentic AI issues using keyword/risk heuristics.
 - Always confirm patch guidance with vendor advisories and official fix releases.
 - For strongest signal quality, tune `AI_KEYWORDS`, `CATEGORY_RULES`, and mapping rules for your environment.
+
+
+

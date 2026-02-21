@@ -11,21 +11,30 @@ const el = {
   search: document.getElementById("search"),
   category: document.getElementById("category"),
   ecosystem: document.getElementById("ecosystem"),
+  triageState: document.getElementById("triage-state"),
   sortBy: document.getElementById("sort-by"),
   confidence: document.getElementById("confidence"),
   confidenceValue: document.getElementById("confidence-value"),
   epssMin: document.getElementById("epss-min"),
   epssMinValue: document.getElementById("epss-min-value"),
+  evidenceMin: document.getElementById("evidence-min"),
+  evidenceMinValue: document.getElementById("evidence-min-value"),
   hasKev: document.getElementById("has-kev"),
   hasFix: document.getElementById("has-fix"),
+  inScope: document.getElementById("in-scope"),
+  hasContradiction: document.getElementById("has-contradiction"),
   hasAtlas: document.getElementById("has-atlas"),
   hasAttack: document.getElementById("has-attack"),
   highMitre: document.getElementById("high-mitre"),
   resetFilters: document.getElementById("reset-filters"),
   refresh: document.getElementById("refresh"),
+  exportCsv: document.getElementById("export-csv"),
   detailTitle: document.getElementById("detail-title"),
   detailMeta: document.getElementById("detail-meta"),
   detailContent: document.getElementById("detail-content"),
+  triageEditState: document.getElementById("triage-edit-state"),
+  triageEditNote: document.getElementById("triage-edit-note"),
+  triageSave: document.getElementById("triage-save"),
   mitrePanel: document.getElementById("mitre-panel"),
   mitreSummary: document.getElementById("mitre-summary"),
   atlasList: document.getElementById("atlas-list"),
@@ -67,7 +76,6 @@ function textPreview(items) {
 
 function sortFindings(list) {
   const mode = el.sortBy.value;
-
   const sorted = [...list];
   if (mode === "published") {
     sorted.sort((a, b) => parseDate(b.published) - parseDate(a.published));
@@ -131,10 +139,14 @@ function applyFilters() {
   const q = el.search.value.trim().toLowerCase();
   const minConfidence = Number(el.confidence.value);
   const minEpss = Number(el.epssMin.value);
+  const minEvidence = Number(el.evidenceMin.value);
   const category = el.category.value;
   const ecosystem = el.ecosystem.value;
+  const triageState = el.triageState.value;
   const mustHaveKev = el.hasKev.checked;
   const mustHaveFix = el.hasFix.checked;
+  const mustBeInScope = el.inScope.checked;
+  const mustHaveContradiction = el.hasContradiction.checked;
   const mustHaveAtlas = el.hasAtlas.checked;
   const mustHaveAttack = el.hasAttack.checked;
   const mustBeHighMitre = el.highMitre.checked;
@@ -143,10 +155,14 @@ function applyFilters() {
   const filtered = state.findings.filter((f) => {
     const confidenceOk = Number(f.confidence || 0) >= minConfidence;
     const epssOk = Number(f.epss_score || 0) >= minEpss;
+    const evidenceOk = Number(f.evidence_score || 0) >= minEvidence;
     const categoryOk = !category || (f.categories || []).includes(category);
     const ecosystemOk = !ecosystem || (f.ecosystems || []).includes(ecosystem);
+    const triageOk = !triageState || String(f.triage_state || "new") === triageState;
     const kevOk = !mustHaveKev || Boolean(f.kev_status);
     const fixOk = !mustHaveFix || Boolean(f.has_fix);
+    const inScopeOk = !mustBeInScope || Boolean(f.asset_in_scope);
+    const contradictionOk = !mustHaveContradiction || (f.contradiction_flags || []).length > 0;
     const atlasOk = !mustHaveAtlas || (f.atlas_matches || []).length > 0;
     const attackOk = !mustHaveAttack || (f.attack_matches || []).length > 0;
     const highMitreOk = !mustBeHighMitre || hasHighMitre(f);
@@ -156,7 +172,8 @@ function applyFilters() {
       (statFilter === "atlas" && (f.atlas_matches || []).length > 0) ||
       (statFilter === "attack" && (f.attack_matches || []).length > 0) ||
       (statFilter === "kev" && Boolean(f.kev_status)) ||
-      (statFilter === "fix" && Boolean(f.has_fix));
+      (statFilter === "fix" && Boolean(f.has_fix)) ||
+      (statFilter === "scope" && Boolean(f.asset_in_scope));
 
     const blob = [
       f.cve_id,
@@ -171,6 +188,12 @@ function applyFilters() {
       f.summary,
       f.correlation_summary,
       f.priority_reason,
+      f.evidence_reason,
+      f.asset_scope_reason,
+      f.triage_state,
+      f.triage_note,
+      f.change_type,
+      f.change_reason,
     ]
       .join(" ")
       .toLowerCase();
@@ -179,10 +202,14 @@ function applyFilters() {
     return (
       confidenceOk &&
       epssOk &&
+      evidenceOk &&
       categoryOk &&
       ecosystemOk &&
+      triageOk &&
       kevOk &&
       fixOk &&
+      inScopeOk &&
+      contradictionOk &&
       atlasOk &&
       attackOk &&
       highMitreOk &&
@@ -200,6 +227,7 @@ function renderStats() {
   const high = state.findings.filter((f) => Number(f.confidence || 0) >= 0.75).length;
   const kevLinked = state.findings.filter((f) => Boolean(f.kev_status)).length;
   const fixLinked = state.findings.filter((f) => Boolean(f.has_fix)).length;
+  const scopeLinked = state.findings.filter((f) => Boolean(f.asset_in_scope)).length;
   const atlasLinked = state.findings.filter((f) => (f.atlas_matches || []).length > 0).length;
   const attackLinked = state.findings.filter((f) => (f.attack_matches || []).length > 0).length;
   el.stats.innerHTML = `
@@ -207,6 +235,7 @@ function renderStats() {
     <button class="stat stat-button ${state.statFilter === "high" ? "active" : ""}" data-stat-filter="high">High-confidence: ${high}</button>
     <button class="stat stat-button ${state.statFilter === "kev" ? "active" : ""}" data-stat-filter="kev">KEV linked: ${kevLinked}</button>
     <button class="stat stat-button ${state.statFilter === "fix" ? "active" : ""}" data-stat-filter="fix">Fix available: ${fixLinked}</button>
+    <button class="stat stat-button ${state.statFilter === "scope" ? "active" : ""}" data-stat-filter="scope">In scope: ${scopeLinked}</button>
     <button class="stat stat-button ${state.statFilter === "atlas" ? "active" : ""}" data-stat-filter="atlas">ATLAS linked: ${atlasLinked}</button>
     <button class="stat stat-button ${state.statFilter === "attack" ? "active" : ""}" data-stat-filter="attack">ATT&CK linked: ${attackLinked}</button>
   `;
@@ -228,13 +257,17 @@ function renderCards() {
       <p>${f.summary || "No summary"}</p>
       <div class="badges">
         <span class="badge">priority ${fmt(f.priority_score)}</span>
+        <span class="badge">evidence ${fmt(f.evidence_score)}</span>
+        <span class="badge">change ${f.change_type || "new"}</span>
         <span class="badge">confidence ${fmt(f.confidence)}</span>
         <span class="badge">EPSS ${fmt(f.epss_score)}</span>
         <span class="badge">KEV ${f.kev_status ? "yes" : "no"}</span>
         <span class="badge">fix ${f.has_fix ? "yes" : "no"}</span>
+        <span class="badge">scope ${f.asset_in_scope ? "yes" : "no"}</span>
       </div>
       <p class="tech-line">Ecosystems: ${textPreview(f.ecosystems)}</p>
       <p class="tech-line">Fixes: ${textPreview(f.fixed_versions)}</p>
+      <p class="tech-line">Triage: ${f.triage_state || "new"}</p>
       <p class="tech-line">ATLAS: ${techniquePreview(f.atlas_matches)}</p>
       <p class="tech-line">ATT&CK: ${techniquePreview(f.attack_matches)}</p>
     `;
@@ -267,6 +300,36 @@ function renderMitrePanel(f) {
   renderMitreList(el.attackList, f.attack_matches || []);
 }
 
+function getSelectedFinding() {
+  return state.findings.find((f) => f.cve_id === state.selectedId) || null;
+}
+
+async function saveTriage() {
+  const selected = getSelectedFinding();
+  if (!selected) return;
+
+  const payload = {
+    state: el.triageEditState.value,
+    note: el.triageEditNote.value,
+  };
+
+  const res = await fetch(`/api/triage/${encodeURIComponent(selected.cve_id)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to save triage");
+  }
+
+  await loadFindings();
+  const updated = state.findings.find((f) => f.cve_id === selected.cve_id);
+  if (updated) {
+    await selectFinding(updated);
+  }
+}
+
 async function selectFinding(f) {
   state.selectedId = f.cve_id;
   renderCards();
@@ -274,8 +337,13 @@ async function selectFinding(f) {
   el.detailTitle.textContent = f.cve_id;
   el.detailMeta.textContent =
     `Published: ${f.published || "N/A"} | Priority: ${fmt(f.priority_score)} | ` +
+    `Evidence: ${fmt(f.evidence_score)} | Change: ${f.change_type || "new"} | ` +
     `EPSS: ${fmt(f.epss_score)} | KEV: ${f.kev_status ? "Yes" : "No"} | ` +
-    `Fix: ${f.has_fix ? "Yes" : "No"}`;
+    `Fix: ${f.has_fix ? "Yes" : "No"} | Scope: ${f.asset_in_scope ? "Yes" : "No"}`;
+
+  el.triageEditState.value = f.triage_state || "new";
+  el.triageEditNote.value = f.triage_note || "";
+
   renderMitrePanel(f);
   el.detailContent.textContent = "Loading report...";
 
@@ -323,6 +391,7 @@ function bindEvents() {
   el.search.addEventListener("input", applyFilters);
   el.category.addEventListener("change", applyFilters);
   el.ecosystem.addEventListener("change", applyFilters);
+  el.triageState.addEventListener("change", applyFilters);
   el.sortBy.addEventListener("change", applyFilters);
 
   el.confidence.addEventListener("input", () => {
@@ -335,8 +404,15 @@ function bindEvents() {
     applyFilters();
   });
 
+  el.evidenceMin.addEventListener("input", () => {
+    el.evidenceMinValue.textContent = fmt(el.evidenceMin.value);
+    applyFilters();
+  });
+
   el.hasKev.addEventListener("change", applyFilters);
   el.hasFix.addEventListener("change", applyFilters);
+  el.inScope.addEventListener("change", applyFilters);
+  el.hasContradiction.addEventListener("change", applyFilters);
   el.hasAtlas.addEventListener("change", applyFilters);
   el.hasAttack.addEventListener("change", applyFilters);
   el.highMitre.addEventListener("change", applyFilters);
@@ -345,17 +421,34 @@ function bindEvents() {
     await loadFindings();
   });
 
+  el.exportCsv.addEventListener("click", () => {
+    window.location.href = "/api/export.csv";
+  });
+
+  el.triageSave.addEventListener("click", async () => {
+    try {
+      await saveTriage();
+    } catch {
+      alert("Failed to save triage state.");
+    }
+  });
+
   el.resetFilters.addEventListener("click", () => {
     el.search.value = "";
     el.category.value = "";
     el.ecosystem.value = "";
+    el.triageState.value = "";
     el.sortBy.value = "priority";
     el.confidence.value = "0";
     el.confidenceValue.textContent = fmt(0);
     el.epssMin.value = "0";
     el.epssMinValue.textContent = fmt(0);
+    el.evidenceMin.value = "0";
+    el.evidenceMinValue.textContent = fmt(0);
     el.hasKev.checked = false;
     el.hasFix.checked = false;
+    el.inScope.checked = false;
+    el.hasContradiction.checked = false;
     el.hasAtlas.checked = false;
     el.hasAttack.checked = false;
     el.highMitre.checked = false;
@@ -399,6 +492,7 @@ function bindEvents() {
   bindEvents();
   el.confidenceValue.textContent = fmt(el.confidence.value);
   el.epssMinValue.textContent = fmt(el.epssMin.value);
+  el.evidenceMinValue.textContent = fmt(el.evidenceMin.value);
   switchView("radar");
   await loadFindings();
   await loadDoc("runbook", "How To Use");

@@ -48,11 +48,15 @@ Open `http://127.0.0.1:8080`.
 ## Configuration reference
 
 - `NVD_API_KEY`: optional NVD API key
-- `WINDOW_DAYS`: CVE lookback window (default `10`)
+- `WINDOW_DAYS`: CVE lookback window (default `30`)
 - `POLL_INTERVAL_MINUTES`: daemon interval (default `60`)
 - `OUTPUT_DIR`: output root (default `output`)
 - `STATE_FILE`: dedupe state file (default `output/state.json`)
 - `LOG_LEVEL`: `DEBUG`, `INFO`, `WARNING`, `ERROR`
+- `SOURCE_CACHE_TTL_MINUTES`: source-cache TTL in minutes (default `15`)
+- `TARGET_ECOSYSTEMS`: comma-separated ecosystem names for in-scope boosting
+- `TARGET_PACKAGES`: comma-separated package names for in-scope boosting
+- `REPROCESS_SEEN`: reprocess seen CVEs to detect changes (`false` by default)
 
 ## Output files
 
@@ -85,4 +89,7 @@ Reinstall packages:
 ```bash
 python -m pip install -r requirements.txt
 ```
+
+
+
 

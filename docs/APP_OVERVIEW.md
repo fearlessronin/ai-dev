@@ -11,7 +11,7 @@ AI CVE Watcher continuously ingests newly published CVEs from NVD, identifies en
 - `daemon`: repeated cycle on a fixed interval
 - `serve`: launches frontend dashboard server
 
-2. `cve_agent.sources.nvd.NVDClient` fetches CVEs from NVD API for the configured rolling time window (`WINDOW_DAYS`, default 10).
+2. `cve_agent.sources.nvd.NVDClient` fetches CVEs from NVD API for the configured rolling time window (`WINDOW_DAYS`, default 30).
 
 3. `cve_agent.analyzer.analyze_candidate` scores each CVE against AI/agentic keywords and maps likely categories (for example prompt injection or unsafe tool execution).
 
@@ -62,3 +62,4 @@ This makes it easy to tune for your environment, but it can still produce false 
 ## Safety guidance
 
 The generated remediation code is guidance, not drop-in patch code for every product/version. Validate fixes against vendor advisories and test in staging before production rollout.
+

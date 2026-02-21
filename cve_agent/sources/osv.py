@@ -1,5 +1,7 @@
 ﻿from __future__ import annotations
 
+import time
+
 import requests
 
 
@@ -28,12 +30,8 @@ class OSVClient:
         for idx in range(0, len(cve_ids), batch_size):
             batch = cve_ids[idx : idx + batch_size]
             payload = {"queries": [{"cve": cve_id} for cve_id in batch]}
-            try:
-                response = requests.post(OSV_QUERY_BATCH_URL, json=payload, timeout=self._timeout)
-                if response.status_code != 200:
-                    continue
-                data = response.json()
-            except requests.RequestException:
+            data = self._request_json_with_retry("post", OSV_QUERY_BATCH_URL, json_payload=payload)
+            if not data:
                 continue
 
             results = data.get("results", [])
@@ -46,11 +44,35 @@ class OSVClient:
     def _fetch_records_single(self, cve_ids: list[str]) -> dict[str, dict]:
         records: dict[str, dict] = {}
         for cve_id in cve_ids:
-            try:
-                response = requests.get(f"{OSV_VULN_URL}/{cve_id}", timeout=self._timeout)
-                if response.status_code != 200:
-                    continue
-                records[cve_id] = response.json()
-            except requests.RequestException:
-                continue
+            data = self._request_json_with_retry("get", f"{OSV_VULN_URL}/{cve_id}")
+            if data:
+                records[cve_id] = data
         return records
+
+    def _request_json_with_retry(
+        self,
+        method: str,
+        url: str,
+        json_payload: dict | None = None,
+    ) -> dict | None:
+        delay = 0.2
+        for attempt in range(3):
+            try:
+                if method == "post":
+                    response = requests.post(url, json=json_payload, timeout=self._timeout)
+                else:
+                    response = requests.get(url, timeout=self._timeout)
+
+                if response.status_code != 200:
+                    return None
+
+                data = response.json()
+                if isinstance(data, dict):
+                    return data
+                return None
+            except requests.RequestException:
+                if attempt == 2:
+                    return None
+                time.sleep(delay)
+                delay *= 2
+        return None

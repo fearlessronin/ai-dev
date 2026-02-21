@@ -1,5 +1,7 @@
 ﻿from __future__ import annotations
 
+import time
+
 import requests
 
 
@@ -21,9 +23,9 @@ class EPSSClient:
         for idx in range(0, len(normalized), batch_size):
             batch = normalized[idx : idx + batch_size]
             params = {"cve": ",".join(batch)}
-            response = requests.get(EPSS_URL, params=params, timeout=self._timeout)
-            response.raise_for_status()
-            payload = response.json()
+            payload = self._get_json_with_retry(params)
+            if not payload:
+                continue
 
             for row in payload.get("data", []):
                 cve = str(row.get("cve", "")).strip().upper()
@@ -44,3 +46,20 @@ class EPSSClient:
                 }
 
         return scores
+
+    def _get_json_with_retry(self, params: dict[str, str]) -> dict | None:
+        delay = 0.2
+        for attempt in range(3):
+            try:
+                response = requests.get(EPSS_URL, params=params, timeout=self._timeout)
+                response.raise_for_status()
+                payload = response.json()
+                if isinstance(payload, dict):
+                    return payload
+                return None
+            except requests.RequestException:
+                if attempt == 2:
+                    return None
+                time.sleep(delay)
+                delay *= 2
+        return None

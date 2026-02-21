@@ -12,12 +12,54 @@ class Reporter:
         self.output_dir = output_dir
         self.reports_dir = output_dir / "reports"
         self.jsonl_path = output_dir / "findings.jsonl"
+        self.latest_path = output_dir / "findings_latest.json"
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.reports_dir.mkdir(parents=True, exist_ok=True)
+        self._previous_latest = self._load_latest()
+        self._current_latest = dict(self._previous_latest)
 
     def write(self, finding: AnalysisResult) -> None:
+        self._apply_change_tracking(finding)
         self._write_jsonl(finding)
         self._write_markdown(finding)
+        self._current_latest[finding.cve.cve_id.upper()] = {
+            "priority_score": finding.priority_score,
+            "has_fix": finding.has_fix,
+            "evidence_score": finding.evidence_score,
+        }
+        self._persist_latest()
+
+    def _load_latest(self) -> dict[str, dict[str, Any]]:
+        try:
+            data = json.loads(self.latest_path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return {str(k).upper(): v for k, v in data.items() if isinstance(v, dict)}
+        except (FileNotFoundError, json.JSONDecodeError):
+            pass
+        return {}
+
+    def _persist_latest(self) -> None:
+        self.latest_path.write_text(json.dumps(self._current_latest, indent=2), encoding="utf-8")
+
+    def _apply_change_tracking(self, finding: AnalysisResult) -> None:
+        prev = self._previous_latest.get(finding.cve.cve_id.upper())
+        if not prev:
+            finding.change_type = "new"
+            finding.change_reason = "first observation"
+            return
+
+        prev_priority = _safe_float(prev.get("priority_score"))
+        prev_has_fix = bool(prev.get("has_fix"))
+
+        if (not prev_has_fix) and finding.has_fix:
+            finding.change_type = "newly_fixed"
+            finding.change_reason = "fix information became available"
+        elif abs(finding.priority_score - prev_priority) >= 0.10:
+            finding.change_type = "priority_changed"
+            finding.change_reason = f"priority changed from {prev_priority:.2f} to {finding.priority_score:.2f}"
+        else:
+            finding.change_type = "unchanged"
+            finding.change_reason = "no material change vs prior snapshot"
 
     def _write_jsonl(self, finding: AnalysisResult) -> None:
         payload = {
@@ -52,6 +94,12 @@ class Reporter:
             "evidence_reason": finding.evidence_reason,
             "evidence_links": finding.evidence_links,
             "contradiction_flags": finding.contradiction_flags,
+            "asset_in_scope": finding.asset_in_scope,
+            "asset_scope_reason": finding.asset_scope_reason,
+            "triage_state": finding.triage_state,
+            "triage_note": finding.triage_note,
+            "change_type": finding.change_type,
+            "change_reason": finding.change_reason,
             "priority_score": finding.priority_score,
             "priority_reason": finding.priority_reason,
         }
@@ -91,6 +139,8 @@ class Reporter:
 ## Operational Risk Signals
 - Priority score: {finding.priority_score:.2f}
 - Priority rationale: {finding.priority_reason or 'N/A'}
+- Change type: {finding.change_type}
+- Change reason: {finding.change_reason}
 - KEV listed: {'Yes' if finding.kev_status else 'No'}
 - KEV date added: {finding.kev_date_added or 'N/A'}
 - KEV due date: {finding.kev_due_date or 'N/A'}
@@ -108,12 +158,18 @@ class Reporter:
 ## Phase 3 Evidence Correlation
 - Evidence score: {finding.evidence_score:.2f}
 - Evidence rationale: {finding.evidence_reason or 'N/A'}
+- In target asset scope: {'Yes' if finding.asset_in_scope else 'No'}
+- Asset scope reason: {finding.asset_scope_reason or 'N/A'}
 
 ### Evidence Links
 {evidence_lines}
 
 ### Contradictions
 {contradiction_lines}
+
+## Triage
+- State: {finding.triage_state}
+- Note: {finding.triage_note or 'N/A'}
 
 ## MITRE Correlation
 - Summary: {finding.correlation_summary}
@@ -170,3 +226,10 @@ class Reporter:
                 f"- {m.technique_id} ({m.technique_name}) | tactic={m.tactic} | confidence={m.confidence} | reason={reasons}"
             )
         return "\n".join(lines)
+
+
+def _safe_float(value: object) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0

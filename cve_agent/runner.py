@@ -22,7 +22,7 @@ class CVEWatcher:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
         self.client = NVDClient(api_key=settings.nvd_api_key)
-        self.kev_client = KEVClient(timeout_seconds=12)
+        self.kev_client = KEVClient(timeout_seconds=12, cache_ttl_minutes=settings.source_cache_ttl_minutes)
         self.epss_client = EPSSClient(timeout_seconds=12)
         self.cveorg_client = CVEOrgClient(timeout_seconds=10)
         self.osv_client = OSVClient(timeout_seconds=10)
@@ -38,7 +38,7 @@ class CVEWatcher:
 
         candidates = []
         for cve in cves:
-            if cve.cve_id in seen:
+            if (cve.cve_id in seen) and (not self.settings.reprocess_seen):
                 continue
             analysis = analyze_candidate(cve)
             if analysis is None:
@@ -73,16 +73,21 @@ class CVEWatcher:
                 epss_entry=epss_entry,
                 cveorg_entry=cveorg_entry,
                 osv_entry=osv_entry,
+                target_ecosystems=self.settings.target_ecosystems,
+                target_packages=self.settings.target_packages,
             )
 
             self.reporter.write(analysis)
-            self.store.mark_seen(cve.cve_id)
+            if cve.cve_id not in seen:
+                self.store.mark_seen(cve.cve_id)
             new_count += 1
             logging.info(
-                "Recorded %s (priority=%.2f, evidence=%.2f, kev=%s, epss=%s, fix=%s)",
+                "Recorded %s (priority=%.2f, evidence=%.2f, change=%s, scope=%s, kev=%s, epss=%s, fix=%s)",
                 cve.cve_id,
                 analysis.priority_score,
                 analysis.evidence_score,
+                analysis.change_type,
+                analysis.asset_in_scope,
                 analysis.kev_status,
                 f"{analysis.epss_score:.3f}" if analysis.epss_score is not None else "n/a",
                 analysis.has_fix,

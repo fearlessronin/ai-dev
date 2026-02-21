@@ -61,5 +61,14 @@ class AnalysisResult:
     evidence_links: list[str] = field(default_factory=list)
     contradiction_flags: list[str] = field(default_factory=list)
 
+    asset_in_scope: bool = False
+    asset_scope_reason: str = ""
+
+    triage_state: str = "new"
+    triage_note: str = ""
+
+    change_type: str = "new"
+    change_reason: str = "first observation"
+
     priority_score: float = 0.0
     priority_reason: str = ""
