@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/styles.css?v=20260220d" />
+    <link rel="stylesheet" href="/assets/styles.css?v=20260220e" />
   </head>
   <body>
     <div class="bg-glow bg-glow-a"></div>
@@ -42,6 +42,13 @@
           </label>
 
           <label>
+            Ecosystem
+            <select id="ecosystem">
+              <option value="">All</option>
+            </select>
+          </label>
+
+          <label>
             Sort By
             <select id="sort-by">
               <option value="priority">Priority</option>
@@ -67,6 +74,7 @@
 
           <div class="check-group">
             <label><input type="checkbox" id="has-kev" /> KEV listed only</label>
+            <label><input type="checkbox" id="has-fix" /> Has fix version</label>
             <label><input type="checkbox" id="has-atlas" /> Has ATLAS match</label>
             <label><input type="checkbox" id="has-attack" /> Has ATT&CK match</label>
             <label><input type="checkbox" id="high-mitre" /> High-confidence MITRE only</label>
@@ -117,6 +125,6 @@
       </article>
     </section>
 
-    <script src="/assets/app.js?v=20260220d"></script>
+    <script src="/assets/app.js?v=20260220e"></script>
   </body>
 </html>

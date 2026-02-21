@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Python 3.11+
-- Internet access to NVD API endpoint
+- Internet access to NVD, CISA KEV, EPSS, CVE.org, and OSV APIs
 
 ## Setup
 
@@ -56,8 +56,8 @@ Open `http://127.0.0.1:8080`.
 
 ## Output files
 
-- `output/findings.jsonl`: one JSON object per finding
-- `output/reports/*.md`: per-CVE remediation docs
+- `output/findings.jsonl`: one JSON object per finding (includes KEV/EPSS/CVE.org/OSV context and priority score)
+- `output/reports/*.md`: per-CVE remediation docs with operational + ecosystem/fix sections
 - `output/state.json`: CVE IDs already processed
 
 ## Troubleshooting
@@ -85,3 +85,4 @@ Reinstall packages:
 ```bash
 python -m pip install -r requirements.txt
 ```
+

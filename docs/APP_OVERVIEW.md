@@ -15,13 +15,19 @@ AI CVE Watcher continuously ingests newly published CVEs from NVD, identifies en
 
 3. `cve_agent.analyzer.analyze_candidate` scores each CVE against AI/agentic keywords and maps likely categories (for example prompt injection or unsafe tool execution).
 
-4. `cve_agent.reporter.Reporter` writes outputs:
+4. Phase 2 enrichment runs before reporting:
+- `cve_agent.sources.kev.KEVClient` for CISA KEV status
+- `cve_agent.sources.epss.EPSSClient` for exploit probability
+- `cve_agent.sources.cveorg.CVEOrgClient` for CNA metadata
+- `cve_agent.sources.osv.OSVClient` for ecosystem/package/fix context
+
+5. `cve_agent.reporter.Reporter` writes outputs:
 - append record to `output/findings.jsonl`
 - create/update markdown report in `output/reports/<CVE-ID>.md`
 
-5. `cve_agent.store.StateStore` deduplicates by CVE ID so already processed findings are not repeatedly emitted.
+6. `cve_agent.store.StateStore` deduplicates by CVE ID so already processed findings are not repeatedly emitted.
 
-6. `cve_agent.web` serves:
+7. `cve_agent.web` serves:
 - static UI files in `frontend/`
 - JSON API: `/api/findings`
 - report API: `/api/report/<CVE-ID>`
@@ -33,6 +39,11 @@ AI CVE Watcher continuously ingests newly published CVEs from NVD, identifies en
 - `cve_agent/runner.py`: orchestration loop
 - `cve_agent/sources/nvd.py`: NVD API client + parser
 - `cve_agent/analyzer.py`: relevance scoring + remediation templates
+- `cve_agent/sources/kev.py`: KEV enrichment client
+- `cve_agent/sources/epss.py`: EPSS enrichment client
+- `cve_agent/sources/cveorg.py`: CVE.org enrichment client
+- `cve_agent/sources/osv.py`: OSV enrichment client
+- `cve_agent/enrichment.py`: phase 1+2 enrichment + priority scoring
 - `cve_agent/reporter.py`: JSONL + markdown writers
 - `cve_agent/store.py`: persistent seen-set state
 - `cve_agent/web.py`: local dashboard server

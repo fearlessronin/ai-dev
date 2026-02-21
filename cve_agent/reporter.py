@@ -42,6 +42,12 @@ class Reporter:
             "kev_required_action": finding.kev_required_action,
             "epss_score": finding.epss_score,
             "epss_percentile": finding.epss_percentile,
+            "cna_org_id": finding.cna_org_id,
+            "affected_products": finding.affected_products,
+            "ecosystems": finding.ecosystems,
+            "packages": finding.packages,
+            "fixed_versions": finding.fixed_versions,
+            "has_fix": finding.has_fix,
             "priority_score": finding.priority_score,
             "priority_reason": finding.priority_reason,
         }
@@ -80,6 +86,14 @@ class Reporter:
 - KEV due date: {finding.kev_due_date or 'N/A'}
 - EPSS score: {finding.epss_score if finding.epss_score is not None else 'N/A'}
 - EPSS percentile: {finding.epss_percentile if finding.epss_percentile is not None else 'N/A'}
+
+## Ecosystem and Fix Context
+- CNA org ID: {finding.cna_org_id or 'N/A'}
+- Affected products: {', '.join(finding.affected_products) if finding.affected_products else 'N/A'}
+- Ecosystems: {', '.join(finding.ecosystems) if finding.ecosystems else 'N/A'}
+- Packages: {', '.join(finding.packages) if finding.packages else 'N/A'}
+- Has fix version: {'Yes' if finding.has_fix else 'No'}
+- Fixed versions: {', '.join(finding.fixed_versions) if finding.fixed_versions else 'N/A'}
 
 ## MITRE Correlation
 - Summary: {finding.correlation_summary}

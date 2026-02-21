@@ -7,7 +7,7 @@ from cve_agent.models import AnalysisResult, CVEItem
 
 
 class EnrichmentTests(unittest.TestCase):
-    def test_apply_enrichment_sets_kev_epss_and_priority(self) -> None:
+    def test_apply_enrichment_sets_phase1_and_phase2_fields(self) -> None:
         cve = CVEItem(
             cve_id="CVE-TEST-2",
             published="",
@@ -36,10 +36,47 @@ class EnrichmentTests(unittest.TestCase):
                 "epss_score": 0.81,
                 "epss_percentile": 0.97,
             },
+            cveorg_entry={
+                "containers": {
+                    "cna": {
+                        "providerMetadata": {"orgId": "ORG-123"},
+                        "affected": [
+                            {
+                                "vendor": "acme",
+                                "product": "agent-sdk",
+                                "versions": [
+                                    {"status": "fixed", "version": "2.3.1"},
+                                ],
+                            }
+                        ],
+                    }
+                }
+            },
+            osv_entry={
+                "affected": [
+                    {
+                        "package": {"ecosystem": "PyPI", "name": "agent-sdk"},
+                        "ranges": [
+                            {
+                                "events": [
+                                    {"introduced": "0"},
+                                    {"fixed": "2.3.1"},
+                                ]
+                            }
+                        ],
+                    }
+                ]
+            },
         )
 
         self.assertTrue(result.kev_status)
         self.assertAlmostEqual(result.epss_score or 0.0, 0.81, places=3)
+        self.assertEqual(result.cna_org_id, "ORG-123")
+        self.assertIn("acme/agent-sdk", result.affected_products)
+        self.assertIn("PyPI", result.ecosystems)
+        self.assertIn("agent-sdk", result.packages)
+        self.assertIn("2.3.1", result.fixed_versions)
+        self.assertTrue(result.has_fix)
         self.assertGreater(result.priority_score, 0.0)
         self.assertIn("KEV listed", result.priority_reason)
 

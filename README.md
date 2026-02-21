@@ -11,6 +11,8 @@ Continuously pulls CVEs from the last 10 days, filters likely agentic AI vulnera
 - Enriches findings with:
   - CISA KEV exploitation status
   - FIRST EPSS exploit probability
+  - CVE.org CNA affected-product metadata
+  - OSV ecosystem/package/fix-version context
   - composite priority score
 - Generates:
   - machine-readable JSON lines
@@ -66,9 +68,12 @@ Then open `http://127.0.0.1:8080`.
   - `mappings/attack_rules.json`
 - MITRE correlator:
   - `cve_agent/correlator.py`
-- Phase 1 enrichment:
+- Enrichment sources:
   - `cve_agent/sources/kev.py`
   - `cve_agent/sources/epss.py`
+  - `cve_agent/sources/cveorg.py`
+  - `cve_agent/sources/osv.py`
+- Enrichment logic:
   - `cve_agent/enrichment.py`
 
 ## Configuration
@@ -84,8 +89,8 @@ Use `.env` or environment variables:
 
 ## Output structure
 
-- `output/findings.jsonl`: includes MITRE + KEV + EPSS + `priority_score`
-- `output/reports/CVE-YYYY-NNNN.md`: remediation report with operational risk section
+- `output/findings.jsonl`: includes MITRE + KEV + EPSS + ecosystem/fix context + `priority_score`
+- `output/reports/CVE-YYYY-NNNN.md`: remediation report with operational and ecosystem sections
 - `output/state.json`: seen CVE tracking for deduplication
 
 ## Notes

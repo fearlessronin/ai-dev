@@ -49,5 +49,12 @@ class AnalysisResult:
     epss_score: float | None = None
     epss_percentile: float | None = None
 
+    cna_org_id: str | None = None
+    affected_products: list[str] = field(default_factory=list)
+    ecosystems: list[str] = field(default_factory=list)
+    packages: list[str] = field(default_factory=list)
+    fixed_versions: list[str] = field(default_factory=list)
+    has_fix: bool = False
+
     priority_score: float = 0.0
     priority_reason: str = ""

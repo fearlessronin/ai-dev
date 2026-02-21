@@ -10,12 +10,14 @@ const el = {
   stats: document.getElementById("stats"),
   search: document.getElementById("search"),
   category: document.getElementById("category"),
+  ecosystem: document.getElementById("ecosystem"),
   sortBy: document.getElementById("sort-by"),
   confidence: document.getElementById("confidence"),
   confidenceValue: document.getElementById("confidence-value"),
   epssMin: document.getElementById("epss-min"),
   epssMinValue: document.getElementById("epss-min-value"),
   hasKev: document.getElementById("has-kev"),
+  hasFix: document.getElementById("has-fix"),
   hasAtlas: document.getElementById("has-atlas"),
   hasAttack: document.getElementById("has-attack"),
   highMitre: document.getElementById("high-mitre"),
@@ -58,6 +60,11 @@ function techniquePreview(matches) {
     .join(", ");
 }
 
+function textPreview(items) {
+  if (!items || !items.length) return "none";
+  return items.slice(0, 2).join(", ");
+}
+
 function sortFindings(list) {
   const mode = el.sortBy.value;
 
@@ -79,6 +86,7 @@ async function loadFindings() {
   if (!res.ok) throw new Error("Failed to load findings");
   state.findings = await res.json();
   populateCategoryOptions();
+  populateEcosystemOptions();
   applyFilters();
   renderStats();
 }
@@ -101,12 +109,32 @@ function populateCategoryOptions() {
   el.category.value = existing;
 }
 
+function populateEcosystemOptions() {
+  const ecosystems = new Set();
+  for (const f of state.findings) {
+    for (const e of f.ecosystems || []) ecosystems.add(e);
+  }
+  const existing = el.ecosystem.value;
+  el.ecosystem.innerHTML = '<option value="">All</option>';
+  Array.from(ecosystems)
+    .sort()
+    .forEach((e) => {
+      const option = document.createElement("option");
+      option.value = e;
+      option.textContent = e;
+      el.ecosystem.appendChild(option);
+    });
+  el.ecosystem.value = existing;
+}
+
 function applyFilters() {
   const q = el.search.value.trim().toLowerCase();
   const minConfidence = Number(el.confidence.value);
   const minEpss = Number(el.epssMin.value);
   const category = el.category.value;
+  const ecosystem = el.ecosystem.value;
   const mustHaveKev = el.hasKev.checked;
+  const mustHaveFix = el.hasFix.checked;
   const mustHaveAtlas = el.hasAtlas.checked;
   const mustHaveAttack = el.hasAttack.checked;
   const mustBeHighMitre = el.highMitre.checked;
@@ -116,7 +144,9 @@ function applyFilters() {
     const confidenceOk = Number(f.confidence || 0) >= minConfidence;
     const epssOk = Number(f.epss_score || 0) >= minEpss;
     const categoryOk = !category || (f.categories || []).includes(category);
+    const ecosystemOk = !ecosystem || (f.ecosystems || []).includes(ecosystem);
     const kevOk = !mustHaveKev || Boolean(f.kev_status);
+    const fixOk = !mustHaveFix || Boolean(f.has_fix);
     const atlasOk = !mustHaveAtlas || (f.atlas_matches || []).length > 0;
     const attackOk = !mustHaveAttack || (f.attack_matches || []).length > 0;
     const highMitreOk = !mustBeHighMitre || hasHighMitre(f);
@@ -125,13 +155,17 @@ function applyFilters() {
       (statFilter === "high" && Number(f.confidence || 0) >= 0.75) ||
       (statFilter === "atlas" && (f.atlas_matches || []).length > 0) ||
       (statFilter === "attack" && (f.attack_matches || []).length > 0) ||
-      (statFilter === "kev" && Boolean(f.kev_status));
+      (statFilter === "kev" && Boolean(f.kev_status)) ||
+      (statFilter === "fix" && Boolean(f.has_fix));
 
     const blob = [
       f.cve_id,
       ...(f.matched_keywords || []),
       ...(f.cwes || []),
       ...(f.categories || []),
+      ...(f.ecosystems || []),
+      ...(f.packages || []),
+      ...(f.fixed_versions || []),
       ...(f.atlas_matches || []).map((m) => m.technique_id),
       ...(f.attack_matches || []).map((m) => m.technique_id),
       f.summary,
@@ -142,7 +176,19 @@ function applyFilters() {
       .toLowerCase();
 
     const queryOk = !q || blob.includes(q);
-    return confidenceOk && epssOk && categoryOk && kevOk && atlasOk && attackOk && highMitreOk && statOk && queryOk;
+    return (
+      confidenceOk &&
+      epssOk &&
+      categoryOk &&
+      ecosystemOk &&
+      kevOk &&
+      fixOk &&
+      atlasOk &&
+      attackOk &&
+      highMitreOk &&
+      statOk &&
+      queryOk
+    );
   });
 
   state.filtered = sortFindings(filtered);
@@ -153,12 +199,14 @@ function renderStats() {
   const total = state.findings.length;
   const high = state.findings.filter((f) => Number(f.confidence || 0) >= 0.75).length;
   const kevLinked = state.findings.filter((f) => Boolean(f.kev_status)).length;
+  const fixLinked = state.findings.filter((f) => Boolean(f.has_fix)).length;
   const atlasLinked = state.findings.filter((f) => (f.atlas_matches || []).length > 0).length;
   const attackLinked = state.findings.filter((f) => (f.attack_matches || []).length > 0).length;
   el.stats.innerHTML = `
     <button class="stat stat-button ${state.statFilter === "" ? "active" : ""}" data-stat-filter="all">Findings: ${total}</button>
     <button class="stat stat-button ${state.statFilter === "high" ? "active" : ""}" data-stat-filter="high">High-confidence: ${high}</button>
     <button class="stat stat-button ${state.statFilter === "kev" ? "active" : ""}" data-stat-filter="kev">KEV linked: ${kevLinked}</button>
+    <button class="stat stat-button ${state.statFilter === "fix" ? "active" : ""}" data-stat-filter="fix">Fix available: ${fixLinked}</button>
     <button class="stat stat-button ${state.statFilter === "atlas" ? "active" : ""}" data-stat-filter="atlas">ATLAS linked: ${atlasLinked}</button>
     <button class="stat stat-button ${state.statFilter === "attack" ? "active" : ""}" data-stat-filter="attack">ATT&CK linked: ${attackLinked}</button>
   `;
@@ -183,7 +231,10 @@ function renderCards() {
         <span class="badge">confidence ${fmt(f.confidence)}</span>
         <span class="badge">EPSS ${fmt(f.epss_score)}</span>
         <span class="badge">KEV ${f.kev_status ? "yes" : "no"}</span>
+        <span class="badge">fix ${f.has_fix ? "yes" : "no"}</span>
       </div>
+      <p class="tech-line">Ecosystems: ${textPreview(f.ecosystems)}</p>
+      <p class="tech-line">Fixes: ${textPreview(f.fixed_versions)}</p>
       <p class="tech-line">ATLAS: ${techniquePreview(f.atlas_matches)}</p>
       <p class="tech-line">ATT&CK: ${techniquePreview(f.attack_matches)}</p>
     `;
@@ -223,7 +274,8 @@ async function selectFinding(f) {
   el.detailTitle.textContent = f.cve_id;
   el.detailMeta.textContent =
     `Published: ${f.published || "N/A"} | Priority: ${fmt(f.priority_score)} | ` +
-    `EPSS: ${fmt(f.epss_score)} | KEV: ${f.kev_status ? "Yes" : "No"}`;
+    `EPSS: ${fmt(f.epss_score)} | KEV: ${f.kev_status ? "Yes" : "No"} | ` +
+    `Fix: ${f.has_fix ? "Yes" : "No"}`;
   renderMitrePanel(f);
   el.detailContent.textContent = "Loading report...";
 
@@ -270,6 +322,7 @@ async function loadDoc(docId, title) {
 function bindEvents() {
   el.search.addEventListener("input", applyFilters);
   el.category.addEventListener("change", applyFilters);
+  el.ecosystem.addEventListener("change", applyFilters);
   el.sortBy.addEventListener("change", applyFilters);
 
   el.confidence.addEventListener("input", () => {
@@ -283,6 +336,7 @@ function bindEvents() {
   });
 
   el.hasKev.addEventListener("change", applyFilters);
+  el.hasFix.addEventListener("change", applyFilters);
   el.hasAtlas.addEventListener("change", applyFilters);
   el.hasAttack.addEventListener("change", applyFilters);
   el.highMitre.addEventListener("change", applyFilters);
@@ -294,12 +348,14 @@ function bindEvents() {
   el.resetFilters.addEventListener("click", () => {
     el.search.value = "";
     el.category.value = "";
+    el.ecosystem.value = "";
     el.sortBy.value = "priority";
     el.confidence.value = "0";
     el.confidenceValue.textContent = fmt(0);
     el.epssMin.value = "0";
     el.epssMinValue.textContent = fmt(0);
     el.hasKev.checked = false;
+    el.hasFix.checked = false;
     el.hasAtlas.checked = false;
     el.hasAttack.checked = false;
     el.highMitre.checked = false;
