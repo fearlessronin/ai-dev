@@ -1,27 +1,48 @@
 ﻿# AI CVE Watcher
 
-Continuously ingests CVEs from a configurable lookback window, enriches them with exploitability and ecosystem context, and produces analyst-ready prioritization for securing AI environments.
+Continuously ingests CVEs from a configurable lookback window, enriches them with multi-source threat context, and produces analyst-ready prioritization for securing AI environments.
 
 ## What It Does
 
-- Pulls CVEs from NVD (2.0 API)
-- Uses configurable rolling window (`WINDOW_DAYS`, default `30`)
+- Pulls CVEs from NVD
 - Scores likely AI-agent / LLM ecosystem relevance
-- Correlates with MITRE ATLAS and MITRE ATT&CK
-- Enriches findings with:
-  - CISA KEV exploitation status
-  - FIRST EPSS exploit probability
-  - CVE.org CNA metadata + Vulnrichment/SSVC-style signals
-  - OSV package/fix context
-  - GHSA advisory context
-  - CIRCL sightings signals
-  - OpenVEX status (optional)
-  - regional/national feeds (CSAF/RSS/JVN-style matching)
-- Generates:
-  - JSONL findings
-  - per-CVE markdown reports
-  - CSV export via UI/API
-- Supports analyst triage workflow and change tracking across runs
+- Correlates findings with MITRE ATLAS and MITRE ATT&CK
+- Enriches each finding with exploitability, fix, ecosystem, and regional/national intelligence signals
+- Supports triage workflow and change tracking across runs
+- Exposes findings in dashboard, JSONL, markdown, and CSV
+
+## Data Feeds Included
+
+| Source | Type | Usage in App |
+|---|---|---|
+| NVD CVE API | API | Base CVE ingest, CVSS/CWE metadata, CPE extraction |
+| CISA KEV | Feed/API JSON | Known exploited status and KEV dates/action |
+| FIRST EPSS | API | Exploit probability and percentile |
+| CVE.org (CNA + ADP/Vulnrichment) | API | Affected/fixed metadata + SSVC-style signals |
+| OSV | API | Package ecosystem and fix-version context |
+| GitHub Security Advisories (GHSA) | API | Advisory linkage, severity, package/version context |
+| CIRCL Vulnerability-Lookup | API | Sightings/external signal enrichment |
+| MITRE ATT&CK feed metadata | Data source (JSON feed) | Feed freshness/version context |
+| OpenVEX | Local data source (file path) | Not-affected/affected override signal |
+| CSAF/global feeds | Data source/feed (configurable URLs) | Regional/national signal matching by CVE |
+| Regional RSS feeds | Data source/feed (configurable URLs) | Regional/national signal matching by CVE |
+| JVN (template-based request) | API/data source (configurable template) | Additional regional CVE signal matching |
+
+## Benefits For Analysts
+
+- Multi-signal prioritization reduces CVSS-only noise.
+- Scope-aware ranking via `TARGET_ECOSYSTEMS`, `TARGET_PACKAGES`, and `TARGET_CPES`.
+- Change tracking: `new`, `priority_changed`, `newly_fixed`, `unchanged`.
+- Triage states and notes: `new`, `investigating`, `mitigated`, `accepted_risk`.
+- Contradiction flags help resolve conflicting source data quickly.
+- Regional/national signal matching helps surface geographically relevant alerts.
+
+## Benefits For Researchers
+
+- Unified cross-source record for pattern and trend analysis.
+- Reprocessing support (`REPROCESS_SEEN=true`) for longitudinal comparisons.
+- Structured JSONL for downstream analytics and experiments.
+- Expanded context fields (SSVC-style, GHSA linkage, sightings, OpenVEX, regional feeds).
 
 ## Quick Start
 
@@ -72,8 +93,8 @@ Open `http://127.0.0.1:8080`.
 - `TARGET_PACKAGES`: comma-separated package scope
 - `TARGET_CPES`: comma-separated CPE fragment scope
 - `REPROCESS_SEEN`: reprocess seen CVEs for change tracking (`false` default)
-- `CSAF_FEED_URLS`: comma-separated CSAF/feed URLs
-- `REGIONAL_RSS_URLS`: comma-separated RSS URLs
+- `CSAF_FEED_URLS`: comma-separated CSAF/global feed URLs
+- `REGIONAL_RSS_URLS`: comma-separated RSS feed URLs
 - `JVN_API_TEMPLATE`: JVN request template containing `{cve_id}`
 
 ## Output
@@ -90,3 +111,10 @@ Open `http://127.0.0.1:8080`.
 - `docs/APP_OVERVIEW.md`
 - `docs/ANALYST_GUIDE.md`
 - `docs/OPTIMIZATION_GUIDE.md`
+
+## Maintenance Rule
+
+When adding, removing, or changing a data source, update this README section:
+- `Data Feeds Included`
+- any related config variables in `Configuration`
+- relevant analyst/researcher impact notes
