@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Python 3.11+
-- Internet access to NVD, CISA KEV, EPSS, CVE.org, and OSV APIs
+- Internet access to NVD, CISA KEV, EPSS, CVE.org, OSV, GitHub Advisory, and CIRCL APIs
 
 ## Setup
 
@@ -48,6 +48,8 @@ Open `http://127.0.0.1:8080`.
 ## Configuration reference
 
 - `NVD_API_KEY`: optional NVD API key
+- `GITHUB_TOKEN`: optional token for higher GHSA API quota
+- `OPENVEX_PATH`: optional path to local OpenVEX JSON file
 - `WINDOW_DAYS`: CVE lookback window (default `30`)
 - `POLL_INTERVAL_MINUTES`: daemon interval (default `60`)
 - `OUTPUT_DIR`: output root (default `output`)
@@ -56,13 +58,15 @@ Open `http://127.0.0.1:8080`.
 - `SOURCE_CACHE_TTL_MINUTES`: source-cache TTL in minutes (default `15`)
 - `TARGET_ECOSYSTEMS`: comma-separated ecosystem names for in-scope boosting
 - `TARGET_PACKAGES`: comma-separated package names for in-scope boosting
+- `TARGET_CPES`: comma-separated CPE fragments for asset scope matching
 - `REPROCESS_SEEN`: reprocess seen CVEs to detect changes (`false` by default)
 
 ## Output files
 
-- `output/findings.jsonl`: one JSON object per finding (includes KEV/EPSS/CVE.org/OSV context and priority score)
+- `output/findings.jsonl`: one JSON object per finding (includes enrichment + evidence fields)
 - `output/reports/*.md`: per-CVE remediation docs with operational + ecosystem/fix sections
 - `output/state.json`: CVE IDs already processed
+- `output/triage.json`: analyst triage state/note overrides
 
 ## Troubleshooting
 
@@ -89,7 +93,3 @@ Reinstall packages:
 ```bash
 python -m pip install -r requirements.txt
 ```
-
-
-
-

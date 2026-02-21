@@ -12,6 +12,7 @@ class CVEItem:
     description: str
     references: list[str] = field(default_factory=list)
     cwes: list[str] = field(default_factory=list)
+    cpes: list[str] = field(default_factory=list)
     cvss_v31_base: float | None = None
     cvss_v31_vector: str | None = None
     raw: dict[str, Any] = field(default_factory=dict)
@@ -53,8 +54,20 @@ class AnalysisResult:
     affected_products: list[str] = field(default_factory=list)
     ecosystems: list[str] = field(default_factory=list)
     packages: list[str] = field(default_factory=list)
+    cpe_uris: list[str] = field(default_factory=list)
     fixed_versions: list[str] = field(default_factory=list)
     has_fix: bool = False
+
+    # Vulnrichment / SSVC style decision context
+    ssvc_decision: str | None = None
+    ssvc_role: str | None = None
+
+    # Additional external signal integrations
+    ghsa_ids: list[str] = field(default_factory=list)
+    ghsa_severity: str | None = None
+    circl_sightings: int | None = None
+    openvex_status: str | None = None
+    attack_feed_version: str | None = None
 
     evidence_score: float = 0.0
     evidence_reason: str = ""

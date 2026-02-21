@@ -73,6 +73,7 @@ class Reporter:
             "remediation": finding.remediation,
             "references": finding.cve.references,
             "cwes": finding.cve.cwes,
+            "cpes": finding.cve.cpes,
             "cvss_v31_base": finding.cve.cvss_v31_base,
             "cvss_v31_vector": finding.cve.cvss_v31_vector,
             "atlas_matches": self._serialize_matches(finding.atlas_matches),
@@ -88,8 +89,16 @@ class Reporter:
             "affected_products": finding.affected_products,
             "ecosystems": finding.ecosystems,
             "packages": finding.packages,
+            "cpe_uris": finding.cpe_uris,
             "fixed_versions": finding.fixed_versions,
             "has_fix": finding.has_fix,
+            "ssvc_decision": finding.ssvc_decision,
+            "ssvc_role": finding.ssvc_role,
+            "ghsa_ids": finding.ghsa_ids,
+            "ghsa_severity": finding.ghsa_severity,
+            "circl_sightings": finding.circl_sightings,
+            "openvex_status": finding.openvex_status,
+            "attack_feed_version": finding.attack_feed_version,
             "evidence_score": finding.evidence_score,
             "evidence_reason": finding.evidence_reason,
             "evidence_links": finding.evidence_links,
@@ -112,6 +121,7 @@ class Reporter:
 
         refs = "\n".join(f"- {url}" for url in cve.references) if cve.references else "- None"
         cwes = ", ".join(cve.cwes) if cve.cwes else "N/A"
+        cpes = ", ".join(cve.cpes) if cve.cpes else "N/A"
         atlas_lines = self._format_match_lines(finding.atlas_matches)
         attack_lines = self._format_match_lines(finding.attack_matches)
         evidence_lines = "\n".join(f"- {x}" for x in finding.evidence_links) if finding.evidence_links else "- None"
@@ -133,6 +143,7 @@ class Reporter:
 - Matched keywords: {', '.join(finding.matched_keywords)}
 - Categories: {', '.join(finding.categories)}
 - CWE: {cwes}
+- CPEs: {cpes}
 - CVSS v3.1 Base Score: {cve.cvss_v31_base if cve.cvss_v31_base is not None else 'N/A'}
 - CVSS v3.1 Vector: {cve.cvss_v31_vector or 'N/A'}
 
@@ -146,12 +157,20 @@ class Reporter:
 - KEV due date: {finding.kev_due_date or 'N/A'}
 - EPSS score: {finding.epss_score if finding.epss_score is not None else 'N/A'}
 - EPSS percentile: {finding.epss_percentile if finding.epss_percentile is not None else 'N/A'}
+- SSVC decision: {finding.ssvc_decision or 'N/A'}
+- SSVC role: {finding.ssvc_role or 'N/A'}
+- GHSA IDs: {', '.join(finding.ghsa_ids) if finding.ghsa_ids else 'N/A'}
+- GHSA severity: {finding.ghsa_severity or 'N/A'}
+- CIRCL sightings: {finding.circl_sightings if finding.circl_sightings is not None else 'N/A'}
+- OpenVEX status: {finding.openvex_status or 'N/A'}
+- ATT&CK feed version: {finding.attack_feed_version or 'N/A'}
 
 ## Ecosystem and Fix Context
 - CNA org ID: {finding.cna_org_id or 'N/A'}
 - Affected products: {', '.join(finding.affected_products) if finding.affected_products else 'N/A'}
 - Ecosystems: {', '.join(finding.ecosystems) if finding.ecosystems else 'N/A'}
 - Packages: {', '.join(finding.packages) if finding.packages else 'N/A'}
+- Matching CPEs: {', '.join(finding.cpe_uris) if finding.cpe_uris else 'N/A'}
 - Has fix version: {'Yes' if finding.has_fix else 'No'}
 - Fixed versions: {', '.join(finding.fixed_versions) if finding.fixed_versions else 'N/A'}
 

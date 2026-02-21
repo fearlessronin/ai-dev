@@ -11,6 +11,7 @@ def apply_phase3_correlation(
     osv_entry: dict | None,
     target_ecosystems: list[str] | None = None,
     target_packages: list[str] | None = None,
+    target_cpes: list[str] | None = None,
 ) -> AnalysisResult:
     score = 0.0
     evidence: list[str] = []
@@ -55,11 +56,40 @@ def apply_phase3_correlation(
         score += 0.1
         evidence.append("Product/package naming overlap across sources")
 
+    if analysis.ghsa_ids:
+        score += 0.1
+        evidence.append("GHSA advisory link present")
+
+    if analysis.ghsa_severity in {"high", "critical"}:
+        score += 0.1
+        evidence.append(f"GHSA severity={analysis.ghsa_severity}")
+
+    if analysis.circl_sightings and analysis.circl_sightings > 0:
+        score += min(0.1, analysis.circl_sightings * 0.01)
+        evidence.append(f"CIRCL sightings={analysis.circl_sightings}")
+
+    if analysis.ssvc_decision:
+        decision = analysis.ssvc_decision.lower()
+        if "act" in decision:
+            score += 0.12
+        elif "track" in decision:
+            score += 0.06
+        evidence.append(f"SSVC decision={analysis.ssvc_decision}")
+
+    if analysis.openvex_status:
+        status = analysis.openvex_status.lower()
+        evidence.append(f"OpenVEX status={analysis.openvex_status}")
+        if status == "not_affected":
+            score = max(0.0, score - 0.2)
+            contradictions.append("OpenVEX indicates not_affected")
+
     in_scope, scope_reason = _asset_scope(
         ecosystems=analysis.ecosystems,
         packages=analysis.packages,
+        cpes=analysis.cpe_uris,
         target_ecosystems=target_ecosystems or [],
         target_packages=target_packages or [],
+        target_cpes=target_cpes or [],
     )
     analysis.asset_in_scope = in_scope
     analysis.asset_scope_reason = scope_reason
@@ -75,7 +105,7 @@ def apply_phase3_correlation(
     analysis.contradiction_flags = contradictions
     analysis.evidence_reason = "; ".join(evidence) if evidence else "No strong cross-source evidence."
 
-    blended = min(1.0, (analysis.priority_score * 0.75) + (analysis.evidence_score * 0.25))
+    blended = min(1.0, (analysis.priority_score * 0.70) + (analysis.evidence_score * 0.30))
     analysis.priority_score = round(blended, 2)
 
     if analysis.evidence_reason:
@@ -91,17 +121,27 @@ def apply_phase3_correlation(
 def _asset_scope(
     ecosystems: list[str],
     packages: list[str],
+    cpes: list[str],
     target_ecosystems: list[str],
     target_packages: list[str],
+    target_cpes: list[str],
 ) -> tuple[bool, str]:
     eco_targets = {x.strip().lower() for x in target_ecosystems if x.strip()}
     pkg_targets = {x.strip().lower() for x in target_packages if x.strip()}
-    if not eco_targets and not pkg_targets:
+    cpe_targets = {x.strip().lower() for x in target_cpes if x.strip()}
+    if not eco_targets and not pkg_targets and not cpe_targets:
         return False, ""
 
     eco_matches = sorted({e for e in ecosystems if e.strip().lower() in eco_targets})
     pkg_matches = sorted({p for p in packages if p.strip().lower() in pkg_targets})
-    if not eco_matches and not pkg_matches:
+
+    cpe_matches: list[str] = []
+    for c in cpes:
+        cl = c.strip().lower()
+        if any(target in cl for target in cpe_targets):
+            cpe_matches.append(c)
+
+    if not eco_matches and not pkg_matches and not cpe_matches:
         return False, ""
 
     reasons: list[str] = []
@@ -109,6 +149,8 @@ def _asset_scope(
         reasons.append(f"ecosystems={', '.join(eco_matches[:3])}")
     if pkg_matches:
         reasons.append(f"packages={', '.join(pkg_matches[:3])}")
+    if cpe_matches:
+        reasons.append(f"cpes={', '.join(cpe_matches[:2])}")
     return True, "; ".join(reasons)
 
 

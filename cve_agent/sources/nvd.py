@@ -63,6 +63,8 @@ class NVDClient:
             cvss_v31 = cvss_data.get("baseScore")
             cvss_vector = cvss_data.get("vectorString")
 
+        cpes = self._extract_cpes(cve)
+
         return CVEItem(
             cve_id=cve_id,
             published=published,
@@ -70,7 +72,24 @@ class NVDClient:
             description=description,
             references=refs,
             cwes=cwes,
+            cpes=cpes,
             cvss_v31_base=cvss_v31,
             cvss_v31_vector=cvss_vector,
             raw=entry,
         )
+
+    def _extract_cpes(self, cve: dict[str, Any]) -> list[str]:
+        found: set[str] = set()
+        for config in cve.get("configurations", []):
+            self._collect_cpes_from_node(config, found)
+        return sorted(found)
+
+    def _collect_cpes_from_node(self, node: dict[str, Any], out: set[str]) -> None:
+        for match in node.get("cpeMatch", []):
+            criteria = str(match.get("criteria", "")).strip()
+            if criteria:
+                out.add(criteria)
+
+        for child in node.get("nodes", []):
+            if isinstance(child, dict):
+                self._collect_cpes_from_node(child, out)

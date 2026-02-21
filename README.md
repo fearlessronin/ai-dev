@@ -12,7 +12,7 @@ Continuously pulls CVEs from the configured lookback window, filters likely agen
   - CISA KEV exploitation status
   - FIRST EPSS exploit probability
   - CVE.org CNA affected-product metadata
-  - OSV ecosystem/package/fix-version context
+  - OSV ecosystem/package/fix-version context`r`n  - GitHub Security Advisories (GHSA) package context`r`n  - CISA Vulnrichment/SSVC signals via CVE.org ADP`r`n  - CIRCL sightings and OpenVEX status (optional)
   - composite priority score
 - Generates:
   - machine-readable JSON lines
@@ -89,7 +89,7 @@ Use `.env` or environment variables:
 - `SOURCE_CACHE_TTL_MINUTES`: source cache TTL in minutes (default: `15`)
 - `TARGET_ECOSYSTEMS`: comma-separated ecosystem names for in-scope boosting
 - `TARGET_PACKAGES`: comma-separated package names for in-scope boosting
-- `REPROCESS_SEEN`: reprocess seen CVEs to detect change types (default: `false`)
+- `REPROCESS_SEEN`: reprocess seen CVEs to detect change types (default: `false`)`r`n- `GITHUB_TOKEN`: optional token for higher GHSA API quota`r`n- `OPENVEX_PATH`: optional path to local OpenVEX JSON file`r`n- `TARGET_CPES`: comma-separated CPE fragments for asset scope matching
 
 ## Output structure
 
@@ -102,6 +102,7 @@ Use `.env` or environment variables:
 - This tool identifies likely agentic AI issues using keyword/risk heuristics.
 - Always confirm patch guidance with vendor advisories and official fix releases.
 - For strongest signal quality, tune `AI_KEYWORDS`, `CATEGORY_RULES`, and mapping rules for your environment.
+
 
 
 
