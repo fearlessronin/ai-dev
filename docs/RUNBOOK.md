@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Python 3.11+
-- Internet access to NVD, CISA KEV, EPSS, CVE.org, OSV, GitHub Advisory, and CIRCL APIs
+- Network access to configured upstream feeds/APIs
 
 ## Setup
 
@@ -19,77 +19,56 @@ pip install -r requirements.txt
 copy .env.example .env
 ```
 
-Optional: set `NVD_API_KEY` in `.env` for better API throughput.
+## Daily Usage
 
-## Daily usage
-
-### 1) Pull latest findings
+### One-time collection
 
 ```bash
 python -m cve_agent.cli once
 ```
 
-### 2) Run continuously
+### Continuous collection
 
 ```bash
 python -m cve_agent.cli daemon
 ```
 
-Default poll interval is 60 minutes. Change via `POLL_INTERVAL_MINUTES`.
-
-### 3) View dashboard
+### Dashboard
 
 ```bash
 python -m cve_agent.cli serve --host 127.0.0.1 --port 8080
 ```
 
-Open `http://127.0.0.1:8080`.
-
-## Configuration reference
+## Configuration Reference
 
 - `NVD_API_KEY`: optional NVD API key
-- `GITHUB_TOKEN`: optional token for higher GHSA API quota
-- `OPENVEX_PATH`: optional path to local OpenVEX JSON file
-- `WINDOW_DAYS`: CVE lookback window (default `30`)
+- `GITHUB_TOKEN`: optional GHSA token
+- `OPENVEX_PATH`: optional OpenVEX JSON path
+- `WINDOW_DAYS`: lookback window (default `30`)
 - `POLL_INTERVAL_MINUTES`: daemon interval (default `60`)
 - `OUTPUT_DIR`: output root (default `output`)
-- `STATE_FILE`: dedupe state file (default `output/state.json`)
+- `STATE_FILE`: seen state path (default `output/state.json`)
 - `LOG_LEVEL`: `DEBUG`, `INFO`, `WARNING`, `ERROR`
-- `SOURCE_CACHE_TTL_MINUTES`: source-cache TTL in minutes (default `15`)
-- `TARGET_ECOSYSTEMS`: comma-separated ecosystem names for in-scope boosting
-- `TARGET_PACKAGES`: comma-separated package names for in-scope boosting
-- `TARGET_CPES`: comma-separated CPE fragments for asset scope matching
-- `REPROCESS_SEEN`: reprocess seen CVEs to detect changes (`false` by default)
+- `SOURCE_CACHE_TTL_MINUTES`: cache TTL for reusable source pulls
+- `TARGET_ECOSYSTEMS`: comma-separated ecosystem scope
+- `TARGET_PACKAGES`: comma-separated package scope
+- `TARGET_CPES`: comma-separated CPE fragment scope
+- `REPROCESS_SEEN`: reprocess seen CVEs for change tracking
+- `CSAF_FEED_URLS`: comma-separated CSAF/global feed URLs
+- `REGIONAL_RSS_URLS`: comma-separated RSS feed URLs
+- `JVN_API_TEMPLATE`: template URL with `{cve_id}` placeholder
 
-## Output files
+## Output Files
 
-- `output/findings.jsonl`: one JSON object per finding (includes enrichment + evidence fields)
-- `output/reports/*.md`: per-CVE remediation docs with operational + ecosystem/fix sections
-- `output/state.json`: CVE IDs already processed
-- `output/triage.json`: analyst triage state/note overrides
+- `output/findings.jsonl`
+- `output/reports/*.md`
+- `output/state.json`
+- `output/triage.json`
+- `output/findings_latest.json`
 
 ## Troubleshooting
 
-### Dashboard not loading
-
-- Confirm server process is running in terminal.
-- Use `http://127.0.0.1:<port>` (not `https`).
-- Try a different port:
-
-```bash
-python -m cve_agent.cli serve --host 127.0.0.1 --port 8090
-```
-
-### No new findings
-
-- Run `once` and inspect logs.
-- Increase `WINDOW_DAYS` temporarily.
-- Check whether CVEs are already in `output/state.json`.
-
-### Dependency/import errors
-
-Reinstall packages:
-
-```bash
-python -m pip install -r requirements.txt
-```
+- If dashboard routes fail, restart with a clean single process on the target port.
+- If ingestion is slow, reduce `WINDOW_DAYS` or tune feed lists.
+- If GHSA calls are rate-limited, set `GITHUB_TOKEN`.
+- If scope match quality is poor, refine `TARGET_*` lists.

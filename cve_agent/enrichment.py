@@ -12,6 +12,7 @@ def apply_enrichment(
     ghsa_entries: list[dict] | None = None,
     circl_entry: dict | None = None,
     openvex_status: str | None = None,
+    regional_sources: list[str] | None = None,
 ) -> AnalysisResult:
     if kev_entry:
         analysis.kev_status = True
@@ -38,12 +39,17 @@ def apply_enrichment(
     if openvex_status:
         analysis.openvex_status = openvex_status
 
+    if regional_sources:
+        analysis.regional_sources.extend(regional_sources)
+
     analysis.cpe_uris = sorted(set(analysis.cpe_uris + (analysis.cve.cpes or [])))
     analysis.affected_products = sorted(set(analysis.affected_products))
     analysis.ecosystems = sorted(set(analysis.ecosystems))
     analysis.packages = sorted(set(analysis.packages))
     analysis.fixed_versions = sorted(set(analysis.fixed_versions))
     analysis.ghsa_ids = sorted(set(analysis.ghsa_ids))
+    analysis.regional_sources = sorted(set(analysis.regional_sources))
+    analysis.regional_signal_count = len(analysis.regional_sources)
     analysis.has_fix = len(analysis.fixed_versions) > 0
 
     _assign_priority(analysis)
@@ -136,10 +142,9 @@ def _apply_ghsa(analysis: AnalysisResult, entries: list[dict]) -> None:
             if name:
                 analysis.packages.append(name)
 
-            for key in ("patched_versions", "vulnerable_version_range"):
-                val = str(vuln.get(key, "")).strip()
-                if key == "patched_versions" and val:
-                    analysis.fixed_versions.append(val)
+            patched = str(vuln.get("patched_versions", "")).strip()
+            if patched:
+                analysis.fixed_versions.append(patched)
 
     if best_severity:
         analysis.ghsa_severity = best_severity
@@ -156,7 +161,6 @@ def _apply_circl(analysis: AnalysisResult, entry: dict) -> None:
         return
 
     if isinstance(sightings, dict):
-        # Handle alternative shapes by summing numeric values.
         total = 0
         for v in sightings.values():
             if isinstance(v, int):
@@ -187,6 +191,10 @@ def _assign_priority(analysis: AnalysisResult) -> None:
     if analysis.has_fix:
         score += 0.05
         reasons.append("Fix available")
+
+    if analysis.regional_signal_count > 0:
+        score += min(0.08, analysis.regional_signal_count * 0.02)
+        reasons.append(f"Regional signals={analysis.regional_signal_count}")
 
     if analysis.cve.cvss_v31_base is not None:
         cvss_component = min(0.15, (analysis.cve.cvss_v31_base / 10.0) * 0.15)

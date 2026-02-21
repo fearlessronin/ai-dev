@@ -58,16 +58,17 @@ class AnalysisResult:
     fixed_versions: list[str] = field(default_factory=list)
     has_fix: bool = False
 
-    # Vulnrichment / SSVC style decision context
     ssvc_decision: str | None = None
     ssvc_role: str | None = None
 
-    # Additional external signal integrations
     ghsa_ids: list[str] = field(default_factory=list)
     ghsa_severity: str | None = None
     circl_sightings: int | None = None
     openvex_status: str | None = None
     attack_feed_version: str | None = None
+
+    regional_sources: list[str] = field(default_factory=list)
+    regional_signal_count: int = 0
 
     evidence_score: float = 0.0
     evidence_reason: str = ""

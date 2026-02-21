@@ -118,6 +118,8 @@ def _to_csv(findings: list[dict]) -> str:
         "has_fix",
         "asset_in_scope",
         "triage_state",
+        "regional_signal_count",
+        "regional_sources",
     ]
     out = StringIO()
     writer = csv.DictWriter(out, fieldnames=fields)
@@ -299,6 +301,8 @@ def serve(
 
     print(f"Dashboard running at http://{host}:{port}")
     server.serve_forever()
+
+
 
 
 

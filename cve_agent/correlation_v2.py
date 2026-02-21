@@ -83,6 +83,12 @@ def apply_phase3_correlation(
             score = max(0.0, score - 0.2)
             contradictions.append("OpenVEX indicates not_affected")
 
+    if analysis.regional_signal_count > 0:
+        score += min(0.12, analysis.regional_signal_count * 0.03)
+        evidence.append(
+            f"Regional/national feeds matched ({analysis.regional_signal_count}): {', '.join(analysis.regional_sources[:3])}"
+        )
+
     in_scope, scope_reason = _asset_scope(
         ecosystems=analysis.ecosystems,
         packages=analysis.packages,

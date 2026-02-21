@@ -19,6 +19,7 @@ from .sources.kev import KEVClient
 from .sources.nvd import NVDClient
 from .sources.openvex import load_openvex_map
 from .sources.osv import OSVClient
+from .sources.regional import RegionalIntelClient
 from .store import StateStore
 
 
@@ -33,6 +34,12 @@ class CVEWatcher:
         self.ghsa_client = GHSAClient(token=settings.github_token, timeout_seconds=12)
         self.circl_client = CIRCLClient(timeout_seconds=12)
         self.attack_feed_client = AttackFeedClient(timeout_seconds=12)
+        self.regional_client = RegionalIntelClient(
+            csaf_feed_urls=settings.csaf_feed_urls,
+            rss_urls=settings.regional_rss_urls,
+            jvn_api_template=settings.jvn_api_template,
+            timeout_seconds=12,
+        )
         self.reporter = Reporter(settings.output_dir)
         self.store = StateStore(settings.state_file)
         mappings_dir = Path(__file__).resolve().parent.parent / "mappings"
@@ -59,6 +66,7 @@ class CVEWatcher:
         osv_map = self.osv_client.fetch_records(candidate_ids)
         ghsa_map = self.ghsa_client.fetch_by_cves(candidate_ids)
         circl_map = self.circl_client.fetch_records(candidate_ids)
+        regional_map = self.regional_client.fetch_signals(candidate_ids)
         openvex_map = load_openvex_map(self.settings.openvex_path)
         attack_feed_meta = self.attack_feed_client.fetch_metadata() or {}
 
@@ -71,6 +79,7 @@ class CVEWatcher:
             osv_entry = osv_map.get(cve_id)
             ghsa_entries = ghsa_map.get(cve_id, [])
             circl_entry = circl_map.get(cve_id)
+            regional_sources = regional_map.get(cve_id, [])
             openvex_status = openvex_map.get(cve_id)
 
             analysis = self.correlator.correlate(analysis)
@@ -83,6 +92,7 @@ class CVEWatcher:
                 ghsa_entries=ghsa_entries,
                 circl_entry=circl_entry,
                 openvex_status=openvex_status,
+                regional_sources=regional_sources,
             )
             analysis.attack_feed_version = attack_feed_meta.get("version") or attack_feed_meta.get("latest_modified")
             analysis = apply_phase3_correlation(
@@ -101,15 +111,13 @@ class CVEWatcher:
                 self.store.mark_seen(cve.cve_id)
             new_count += 1
             logging.info(
-                "Recorded %s (priority=%.2f, evidence=%.2f, change=%s, scope=%s, kev=%s, epss=%s, fix=%s)",
+                "Recorded %s (priority=%.2f, evidence=%.2f, regional=%s, change=%s, scope=%s)",
                 cve.cve_id,
                 analysis.priority_score,
                 analysis.evidence_score,
+                analysis.regional_signal_count,
                 analysis.change_type,
                 analysis.asset_in_scope,
-                analysis.kev_status,
-                f"{analysis.epss_score:.3f}" if analysis.epss_score is not None else "n/a",
-                analysis.has_fix,
             )
 
         logging.info("Run complete. New findings: %s", new_count)

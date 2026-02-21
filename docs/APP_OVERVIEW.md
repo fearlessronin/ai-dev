@@ -60,3 +60,4 @@ AI CVE Watcher continuously ingests newly published CVEs from NVD, identifies en
 ## Safety guidance
 
 Generated remediation code is guidance, not drop-in patch code for every product/version. Validate with vendor advisories and test in staging before production rollout.
+

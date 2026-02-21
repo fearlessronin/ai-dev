@@ -21,6 +21,7 @@ const el = {
   evidenceMinValue: document.getElementById("evidence-min-value"),
   hasKev: document.getElementById("has-kev"),
   hasFix: document.getElementById("has-fix"),
+  hasRegional: document.getElementById("has-regional"),
   inScope: document.getElementById("in-scope"),
   hasContradiction: document.getElementById("has-contradiction"),
   hasAtlas: document.getElementById("has-atlas"),
@@ -145,6 +146,7 @@ function applyFilters() {
   const triageState = el.triageState.value;
   const mustHaveKev = el.hasKev.checked;
   const mustHaveFix = el.hasFix.checked;
+  const mustHaveRegional = el.hasRegional.checked;
   const mustBeInScope = el.inScope.checked;
   const mustHaveContradiction = el.hasContradiction.checked;
   const mustHaveAtlas = el.hasAtlas.checked;
@@ -161,6 +163,7 @@ function applyFilters() {
     const triageOk = !triageState || String(f.triage_state || "new") === triageState;
     const kevOk = !mustHaveKev || Boolean(f.kev_status);
     const fixOk = !mustHaveFix || Boolean(f.has_fix);
+    const regionalOk = !mustHaveRegional || Number(f.regional_signal_count || 0) > 0;
     const inScopeOk = !mustBeInScope || Boolean(f.asset_in_scope);
     const contradictionOk = !mustHaveContradiction || (f.contradiction_flags || []).length > 0;
     const atlasOk = !mustHaveAtlas || (f.atlas_matches || []).length > 0;
@@ -173,6 +176,7 @@ function applyFilters() {
       (statFilter === "attack" && (f.attack_matches || []).length > 0) ||
       (statFilter === "kev" && Boolean(f.kev_status)) ||
       (statFilter === "fix" && Boolean(f.has_fix)) ||
+      (statFilter === "regional" && Number(f.regional_signal_count || 0) > 0) ||
       (statFilter === "scope" && Boolean(f.asset_in_scope));
 
     const blob = [
@@ -194,6 +198,7 @@ function applyFilters() {
       f.triage_note,
       f.change_type,
       f.change_reason,
+      ...(f.regional_sources || []),
     ]
       .join(" ")
       .toLowerCase();
@@ -208,6 +213,7 @@ function applyFilters() {
       triageOk &&
       kevOk &&
       fixOk &&
+      regionalOk &&
       inScopeOk &&
       contradictionOk &&
       atlasOk &&
@@ -227,12 +233,14 @@ function renderStats() {
   const high = state.findings.filter((f) => Number(f.confidence || 0) >= 0.75).length;
   const kevLinked = state.findings.filter((f) => Boolean(f.kev_status)).length;
   const fixLinked = state.findings.filter((f) => Boolean(f.has_fix)).length;
+  const regionalLinked = state.findings.filter((f) => Number(f.regional_signal_count || 0) > 0).length;
   const scopeLinked = state.findings.filter((f) => Boolean(f.asset_in_scope)).length;
   const atlasLinked = state.findings.filter((f) => (f.atlas_matches || []).length > 0).length;
   const attackLinked = state.findings.filter((f) => (f.attack_matches || []).length > 0).length;
   el.stats.innerHTML = `
     <button class="stat stat-button ${state.statFilter === "" ? "active" : ""}" data-stat-filter="all">Findings: ${total}</button>
     <button class="stat stat-button ${state.statFilter === "high" ? "active" : ""}" data-stat-filter="high">High-confidence: ${high}</button>
+    <button class="stat stat-button ${state.statFilter === "regional" ? "active" : ""}" data-stat-filter="regional">Regional intel: ${regionalLinked}</button>
     <button class="stat stat-button ${state.statFilter === "kev" ? "active" : ""}" data-stat-filter="kev">KEV linked: ${kevLinked}</button>
     <button class="stat stat-button ${state.statFilter === "fix" ? "active" : ""}" data-stat-filter="fix">Fix available: ${fixLinked}</button>
     <button class="stat stat-button ${state.statFilter === "scope" ? "active" : ""}" data-stat-filter="scope">In scope: ${scopeLinked}</button>
@@ -264,6 +272,7 @@ function renderCards() {
         <span class="badge">KEV ${f.kev_status ? "yes" : "no"}</span>
         <span class="badge">fix ${f.has_fix ? "yes" : "no"}</span>
         <span class="badge">scope ${f.asset_in_scope ? "yes" : "no"}</span>
+        <span class="badge">regional ${Number(f.regional_signal_count || 0)}</span>
       </div>
       <p class="tech-line">Ecosystems: ${textPreview(f.ecosystems)}</p>
       <p class="tech-line">Fixes: ${textPreview(f.fixed_versions)}</p>
@@ -411,6 +420,7 @@ function bindEvents() {
 
   el.hasKev.addEventListener("change", applyFilters);
   el.hasFix.addEventListener("change", applyFilters);
+  el.hasRegional.addEventListener("change", applyFilters);
   el.inScope.addEventListener("change", applyFilters);
   el.hasContradiction.addEventListener("change", applyFilters);
   el.hasAtlas.addEventListener("change", applyFilters);
@@ -447,6 +457,7 @@ function bindEvents() {
     el.evidenceMinValue.textContent = fmt(0);
     el.hasKev.checked = false;
     el.hasFix.checked = false;
+    el.hasRegional.checked = false;
     el.inScope.checked = false;
     el.hasContradiction.checked = false;
     el.hasAtlas.checked = false;
@@ -482,7 +493,8 @@ function bindEvents() {
     button.addEventListener("click", async () => {
       el.docLinks.forEach((b) => b.classList.remove("active"));
       button.classList.add("active");
-      const titleMap = { runbook: "How To Use", overview: "Architecture", analyst: "Analyst Guide", optimize: "Optimization Guide" };`r`n      const title = titleMap[button.dataset.doc] || "Documentation";
+      const titleMap = { runbook: "How To Use", overview: "Architecture", analyst: "Analyst Guide", optimize: "Optimization Guide" };
+      const title = titleMap[button.dataset.doc] || "Documentation";
       await loadDoc(button.dataset.doc, title);
     });
   });
@@ -497,4 +509,6 @@ function bindEvents() {
   await loadFindings();
   await loadDoc("runbook", "How To Use");
 })();
+
+
 

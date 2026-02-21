@@ -22,6 +22,9 @@ class Settings:
     target_packages: list[str]
     target_cpes: list[str]
     reprocess_seen: bool
+    csaf_feed_urls: list[str]
+    regional_rss_urls: list[str]
+    jvn_api_template: str
 
 
 def _csv_env(name: str) -> list[str]:
@@ -44,6 +47,17 @@ def load_settings() -> Settings:
     output_dir = Path(os.getenv("OUTPUT_DIR", "output")).resolve()
     state_default = output_dir / "state.json"
 
+    default_rss = [
+        "https://www.cert.europa.eu/rss/advisories.xml",
+        "https://www.govcert.gov.hk/en/rss.html",
+        "https://www.hkcert.org/getrss",
+    ]
+
+    default_csaf = [
+        "https://aggregator.certvde.com/",
+        "https://advisories.ncsc.nl/service/",
+    ]
+
     return Settings(
         nvd_api_key=os.getenv("NVD_API_KEY") or None,
         github_token=os.getenv("GITHUB_TOKEN") or None,
@@ -58,4 +72,10 @@ def load_settings() -> Settings:
         target_packages=_csv_env("TARGET_PACKAGES"),
         target_cpes=_csv_env("TARGET_CPES"),
         reprocess_seen=_bool_env("REPROCESS_SEEN", False),
+        csaf_feed_urls=_csv_env("CSAF_FEED_URLS") or default_csaf,
+        regional_rss_urls=_csv_env("REGIONAL_RSS_URLS") or default_rss,
+        jvn_api_template=os.getenv(
+            "JVN_API_TEMPLATE",
+            "https://jvndb.jvn.jp/en/myjvn?method=getVulnOverviewList&cveId={cve_id}",
+        ),
     )

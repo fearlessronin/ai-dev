@@ -99,6 +99,8 @@ class Reporter:
             "circl_sightings": finding.circl_sightings,
             "openvex_status": finding.openvex_status,
             "attack_feed_version": finding.attack_feed_version,
+            "regional_sources": finding.regional_sources,
+            "regional_signal_count": finding.regional_signal_count,
             "evidence_score": finding.evidence_score,
             "evidence_reason": finding.evidence_reason,
             "evidence_links": finding.evidence_links,
@@ -164,6 +166,8 @@ class Reporter:
 - CIRCL sightings: {finding.circl_sightings if finding.circl_sightings is not None else 'N/A'}
 - OpenVEX status: {finding.openvex_status or 'N/A'}
 - ATT&CK feed version: {finding.attack_feed_version or 'N/A'}
+- Regional/National sources: {', '.join(finding.regional_sources) if finding.regional_sources else 'N/A'}
+- Regional signal count: {finding.regional_signal_count}
 
 ## Ecosystem and Fix Context
 - CNA org ID: {finding.cna_org_id or 'N/A'}
