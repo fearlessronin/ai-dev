@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .analyzer import analyze_candidate
 from .config import Settings
+from .correlation_v2 import apply_phase3_correlation
 from .correlator import MitreCorrelator
 from .enrichment import apply_enrichment
 from .reporter import Reporter
@@ -52,22 +53,36 @@ class CVEWatcher:
 
         new_count = 0
         for cve, analysis in candidates:
+            cve_id = cve.cve_id.upper()
+            kev_entry = kev_map.get(cve_id)
+            epss_entry = epss_map.get(cve_id)
+            cveorg_entry = cveorg_map.get(cve_id)
+            osv_entry = osv_map.get(cve_id)
+
             analysis = self.correlator.correlate(analysis)
             analysis = apply_enrichment(
                 analysis,
-                kev_entry=kev_map.get(cve.cve_id.upper()),
-                epss_entry=epss_map.get(cve.cve_id.upper()),
-                cveorg_entry=cveorg_map.get(cve.cve_id.upper()),
-                osv_entry=osv_map.get(cve.cve_id.upper()),
+                kev_entry=kev_entry,
+                epss_entry=epss_entry,
+                cveorg_entry=cveorg_entry,
+                osv_entry=osv_entry,
+            )
+            analysis = apply_phase3_correlation(
+                analysis,
+                kev_entry=kev_entry,
+                epss_entry=epss_entry,
+                cveorg_entry=cveorg_entry,
+                osv_entry=osv_entry,
             )
 
             self.reporter.write(analysis)
             self.store.mark_seen(cve.cve_id)
             new_count += 1
             logging.info(
-                "Recorded %s (priority=%.2f, kev=%s, epss=%s, fix=%s)",
+                "Recorded %s (priority=%.2f, evidence=%.2f, kev=%s, epss=%s, fix=%s)",
                 cve.cve_id,
                 analysis.priority_score,
+                analysis.evidence_score,
                 analysis.kev_status,
                 f"{analysis.epss_score:.3f}" if analysis.epss_score is not None else "n/a",
                 analysis.has_fix,

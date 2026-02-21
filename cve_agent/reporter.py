@@ -48,6 +48,10 @@ class Reporter:
             "packages": finding.packages,
             "fixed_versions": finding.fixed_versions,
             "has_fix": finding.has_fix,
+            "evidence_score": finding.evidence_score,
+            "evidence_reason": finding.evidence_reason,
+            "evidence_links": finding.evidence_links,
+            "contradiction_flags": finding.contradiction_flags,
             "priority_score": finding.priority_score,
             "priority_reason": finding.priority_reason,
         }
@@ -62,6 +66,12 @@ class Reporter:
         cwes = ", ".join(cve.cwes) if cve.cwes else "N/A"
         atlas_lines = self._format_match_lines(finding.atlas_matches)
         attack_lines = self._format_match_lines(finding.attack_matches)
+        evidence_lines = "\n".join(f"- {x}" for x in finding.evidence_links) if finding.evidence_links else "- None"
+        contradiction_lines = (
+            "\n".join(f"- {x}" for x in finding.contradiction_flags)
+            if finding.contradiction_flags
+            else "- None"
+        )
 
         content = f"""# {cve.cve_id}
 
@@ -94,6 +104,16 @@ class Reporter:
 - Packages: {', '.join(finding.packages) if finding.packages else 'N/A'}
 - Has fix version: {'Yes' if finding.has_fix else 'No'}
 - Fixed versions: {', '.join(finding.fixed_versions) if finding.fixed_versions else 'N/A'}
+
+## Phase 3 Evidence Correlation
+- Evidence score: {finding.evidence_score:.2f}
+- Evidence rationale: {finding.evidence_reason or 'N/A'}
+
+### Evidence Links
+{evidence_lines}
+
+### Contradictions
+{contradiction_lines}
 
 ## MITRE Correlation
 - Summary: {finding.correlation_summary}

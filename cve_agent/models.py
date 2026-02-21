@@ -56,5 +56,10 @@ class AnalysisResult:
     fixed_versions: list[str] = field(default_factory=list)
     has_fix: bool = False
 
+    evidence_score: float = 0.0
+    evidence_reason: str = ""
+    evidence_links: list[str] = field(default_factory=list)
+    contradiction_flags: list[str] = field(default_factory=list)
+
     priority_score: float = 0.0
     priority_reason: str = ""
