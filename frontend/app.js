@@ -482,7 +482,7 @@ function bindEvents() {
     button.addEventListener("click", async () => {
       el.docLinks.forEach((b) => b.classList.remove("active"));
       button.classList.add("active");
-      const title = button.dataset.doc === "runbook" ? "How To Use" : "Architecture";
+      const titleMap = { runbook: "How To Use", overview: "Architecture", analyst: "Analyst Guide", optimize: "Optimization Guide" };`r`n      const title = titleMap[button.dataset.doc] || "Documentation";
       await loadDoc(button.dataset.doc, title);
     });
   });
@@ -497,3 +497,4 @@ function bindEvents() {
   await loadFindings();
   await loadDoc("runbook", "How To Use");
 })();
+

@@ -15,6 +15,8 @@ from urllib.parse import unquote
 DOC_MAP = {
     "overview": "APP_OVERVIEW.md",
     "runbook": "RUNBOOK.md",
+    "analyst": "ANALYST_GUIDE.md",
+    "optimize": "OPTIMIZATION_GUIDE.md",
 }
 
 VALID_TRIAGE_STATES = {"new", "investigating", "mitigated", "accepted_risk"}
@@ -297,3 +299,6 @@ def serve(
 
     print(f"Dashboard running at http://{host}:{port}")
     server.serve_forever()
+
+
+
