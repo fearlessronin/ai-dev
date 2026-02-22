@@ -76,3 +76,11 @@ Use broader scope and longer windows to discover emerging patterns:
 - compare source freshness and availability when evaluating dataset coverage quality
 
 Then convert findings back into tighter production rules.
+
+
+## Corroboration Tuning (Phase 5)
+
+- Treat `source_corroboration_score >= 0.80` as strong confirmation, especially with asset matches.
+- Review `regional_escalation_badges` daily to detect cross-country advisory amplification.
+- Use the patch matrix to avoid over-trusting a single source when fix metadata is incomplete.
+- Expand `REGIONAL_RSS_URLS` and `CSAF_FEED_URLS` carefully; more feeds improve corroboration breadth but can increase noise.

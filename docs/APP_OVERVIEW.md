@@ -26,26 +26,33 @@ AI CVE Watcher continuously ingests newly published CVEs, identifies entries lik
 - `cve_agent.sources.msrc.MSRCClient` (Microsoft vendor confirmation signal)
 - `cve_agent.sources.redhat.RedHatSecurityClient` (vendor package/advisory/fix-state context)
 - `cve_agent.sources.debian.DebianTrackerClient` (distro package/release fixed-version context)
+- `cve_agent.sources.public_advisories.PublicAdvisoryClient` (CISA ICS / CERT-FR / BSI-CERT-Bund advisory HTML parsing for regional escalation signals)
 - `cve_agent.sources.regional.RegionalIntelClient` (regional/national RSS + CSAF + JVN pattern matching)
 - `cve_agent.sources.attack_feed.AttackFeedClient` (ATT&CK feed freshness metadata)
 - `cve_agent.sources.openvex.load_openvex_map` (local OpenVEX status overrides)
 
 5. `cve_agent.correlation_v2.apply_phase3_correlation` computes evidence-weighted score and contradictions, with optional environment targeting (`TARGET_ECOSYSTEMS`, `TARGET_PACKAGES`, `TARGET_CPES`).
 
-6. `cve_agent.reporter.Reporter` writes:
+6. `cve_agent.phase5.apply_phase5_features` derives higher-order analyst context:
+- source confidence + corroboration score
+- regional escalation badges (multi-national / transatlantic overlap)
+- asset mapping hits against configured package/ecosystem/CPE scope
+- patch availability matrix across open + vendor/distro sources
+
+7. `cve_agent.reporter.Reporter` writes:
 - append record to `output/findings.jsonl`
 - create/update markdown report in `output/reports/<CVE-ID>.md`
 - maintain latest snapshot for run-to-run change classification
 
-7. `cve_agent.store.StateStore` deduplicates by CVE ID unless `REPROCESS_SEEN=true`.
+8. `cve_agent.store.StateStore` deduplicates by CVE ID unless `REPROCESS_SEEN=true`.
 
-8. `cve_agent.polling.PollController` (serve mode) manages runtime polling state:
+9. `cve_agent.polling.PollController` (serve mode) manages runtime polling state:
 - auto-poll enabled/disabled without restart
 - interval changes at runtime
 - manual trigger (`Poll Now`)
 - persisted freshness state in `output/poll_status.json`
 
-9. `cve_agent.web` serves:
+10. `cve_agent.web` serves:
 - static UI files in `frontend/`
 - JSON APIs: `/api/findings`, `/api/poll/status`
 - mutation APIs: `POST /api/triage/<CVE-ID>`, `POST /api/poll/config`, `POST /api/poll/run`

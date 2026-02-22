@@ -86,3 +86,19 @@ class AnalysisResult:
 
     priority_score: float = 0.0
     priority_reason: str = ""
+
+    source_corroboration_score: float = 0.0
+    source_corroboration_count: int = 0
+    source_confidence_label: str = "low"
+    source_corroboration_sources: list[str] = field(default_factory=list)
+    source_family_presence: dict[str, bool] = field(default_factory=dict)
+    vendor_advisory_count: int = 0
+    national_feed_count: int = 0
+    regional_escalation_badges: list[str] = field(default_factory=list)
+
+    asset_mapping_hits: list[dict[str, str]] = field(default_factory=list)
+    asset_mapping_score: float = 0.0
+    asset_mapping_summary: str = ""
+
+    patch_availability_matrix: dict[str, dict[str, Any]] = field(default_factory=dict)
+    patch_availability_summary: str = ""

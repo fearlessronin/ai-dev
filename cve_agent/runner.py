@@ -12,6 +12,7 @@ from .config import Settings
 from .correlation_v2 import apply_phase3_correlation
 from .correlator import MitreCorrelator
 from .enrichment import apply_enrichment
+from .phase5 import apply_phase5_features
 from .reporter import Reporter
 from .sources.attack_feed import AttackFeedClient
 from .sources.circl import CIRCLClient
@@ -24,6 +25,7 @@ from .sources.msrc import MSRCClient
 from .sources.nvd import NVDClient
 from .sources.openvex import load_openvex_map
 from .sources.osv import OSVClient
+from .sources.public_advisories import PublicAdvisoryClient
 from .sources.redhat import RedHatSecurityClient, extract_redhat_context
 from .sources.regional import RegionalIntelClient
 from .store import StateStore
@@ -40,6 +42,9 @@ SOURCE_NAMES = [
     "msrc",
     "redhat",
     "debian",
+    "cisa_ics",
+    "certfr",
+    "bsi",
     "openvex",
     "attack_feed",
 ]
@@ -65,6 +70,7 @@ class CVEWatcher:
         self.msrc_client = MSRCClient(timeout_seconds=12)
         self.redhat_client = RedHatSecurityClient(timeout_seconds=12)
         self.debian_client = DebianTrackerClient(timeout_seconds=20, cache_ttl_minutes=30)
+        self.public_advisory_client = PublicAdvisoryClient(timeout_seconds=12)
         self.reporter = Reporter(settings.output_dir)
         self.store = StateStore(settings.state_file)
         mappings_dir = Path(__file__).resolve().parent.parent / "mappings"
@@ -97,6 +103,13 @@ class CVEWatcher:
         msrc_map = self._call_source("msrc", lambda: self.msrc_client.fetch_records(candidate_ids))
         redhat_map = self._call_source("redhat", lambda: self.redhat_client.fetch_records(candidate_ids))
         debian_map = self._call_source("debian", lambda: self.debian_client.fetch_records(candidate_ids))
+        cisa_ics_map = self._call_source(
+            "cisa_ics", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "cisa_ics")
+        )
+        certfr_map = self._call_source(
+            "certfr", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "certfr")
+        )
+        bsi_map = self._call_source("bsi", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "bsi"))
         openvex_map = self._call_source("openvex", lambda: load_openvex_map(self.settings.openvex_path))
         attack_feed_meta = self._call_source("attack_feed", self.attack_feed_client.fetch_metadata) or {}
 
@@ -110,6 +123,9 @@ class CVEWatcher:
             ghsa_entries = ghsa_map.get(cve_id, [])
             circl_entry = circl_map.get(cve_id)
             regional_sources = list(regional_map.get(cve_id, []))
+            regional_sources.extend(cisa_ics_map.get(cve_id, []))
+            regional_sources.extend(certfr_map.get(cve_id, []))
+            regional_sources.extend(bsi_map.get(cve_id, []))
             openvex_status = openvex_map.get(cve_id)
 
             vendor_sources, vendor_packages, vendor_fixed_versions = self._vendor_context_for_cve(
@@ -149,6 +165,17 @@ class CVEWatcher:
                 epss_entry=epss_entry,
                 cveorg_entry=cveorg_entry,
                 osv_entry=osv_entry,
+                target_ecosystems=self.settings.target_ecosystems,
+                target_packages=self.settings.target_packages,
+                target_cpes=self.settings.target_cpes,
+            )
+            analysis = apply_phase5_features(
+                analysis,
+                cveorg_entry=cveorg_entry,
+                osv_entry=osv_entry,
+                msrc_entry=msrc_map.get(cve_id),
+                redhat_entry=redhat_map.get(cve_id),
+                debian_entry=debian_map.get(cve_id),
                 target_ecosystems=self.settings.target_ecosystems,
                 target_packages=self.settings.target_packages,
                 target_cpes=self.settings.target_cpes,

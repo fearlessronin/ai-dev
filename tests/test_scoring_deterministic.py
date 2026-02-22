@@ -122,7 +122,7 @@ class DeterministicScoringTests(unittest.TestCase):
 
             rows = (out / "findings.jsonl").read_text(encoding="utf-8").splitlines()
             payload = json.loads(rows[0])
-            self.assertEqual(payload["schema_version"], "1.0")
+            self.assertEqual(payload["schema_version"], "1.1")
             self.assertIn("cve_id", payload)
             self.assertIn("priority_score", payload)
             self.assertIn("change_type", payload)
@@ -144,3 +144,4 @@ def _analysis(cve_id: str, priority: float, has_fix: bool) -> AnalysisResult:
 
 if __name__ == "__main__":
     unittest.main()
+

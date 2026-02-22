@@ -12,7 +12,7 @@ It combines multiple signals in one place:
 - CIRCL sightings and optional OpenVEX override status
 - Vendor/distro context from MSRC, Red Hat Security Data API, and Debian Security Tracker
 - MITRE ATLAS and ATT&CK mapping
-- Regional/national feed matching (CSAF/RSS/JVN)
+- Regional/national feed matching (CSAF/RSS/JVN) plus public advisory parsing for CISA ICS, CERT-FR, and BSI/CERT-Bund
 
 ## Who Should Use It
 
@@ -63,3 +63,17 @@ If OpenVEX marks a CVE as `not_affected`, validate quickly and downgrade unless 
 - Review contradiction flags early; they often reveal source drift or version ambiguity.
 - Treat missing fix data as uncertainty, not safety.
 - If a source card shows `error` or stale freshness, use `Poll Now` after network/API recovery.
+
+
+## Phase 5 Analyst Signals
+
+Use the right-side `Phase 5 Correlation` panel to quickly assess:
+- whether a finding is corroborated by independent source families (not just one feed)
+- whether regional escalation is emerging across national advisories
+- whether the finding maps to your configured asset/package scope
+- whether patch/fix signals exist across CVE.org / OSV / vendor-distro advisories
+
+Recommended workflow add-on:
+1. Prioritize findings with `high` corroboration and `asset mapping` hits.
+2. Escalate faster when `transatlantic-escalation` or multiple national badges appear.
+3. Use the patch matrix to choose vendor patch validation order.

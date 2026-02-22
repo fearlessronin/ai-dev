@@ -39,6 +39,8 @@ const el = {
   detailContent: document.getElementById("detail-content"),
   vendorPanel: document.getElementById("vendor-panel"),
   vendorSummary: document.getElementById("vendor-summary"),
+  phase5Panel: document.getElementById("phase5-panel"),
+  phase5Summary: document.getElementById("phase5-summary"),
   triageEditState: document.getElementById("triage-edit-state"),
   triageEditNote: document.getElementById("triage-edit-note"),
   triageSave: document.getElementById("triage-save"),
@@ -142,7 +144,39 @@ function resetDetailPanel(message) {
   if (el.vendorSummary) {
     el.vendorSummary.textContent = "Select a finding to view vendor and distro corroboration details.";
   }
+  if (el.phase5Summary) {
+    el.phase5Summary.textContent = "Select a finding to view corroboration scoring, regional escalation badges, asset mapping, and patch matrix.";
+  }
   el.detailContent.textContent = message;
+}
+
+
+function patchMatrixPreview(matrix) {
+  if (!matrix || typeof matrix !== "object") return "none";
+  const order = ["nvd", "cveorg", "osv", "msrc", "redhat", "debian"];
+  return order
+    .filter((k) => matrix[k])
+    .map((k) => `${k.toUpperCase()}:present=${matrix[k].present ? "yes" : "no"},fix=${matrix[k].fix_available === null || matrix[k].fix_available === undefined ? "unknown" : matrix[k].fix_available ? "yes" : "no"}`)
+    .join(" | ");
+}
+
+function phase5SummaryText(f) {
+  const badges = (f.regional_escalation_badges || []).join(", ") || "none";
+  const assetHits = (f.asset_mapping_hits || [])
+    .slice(0, 5)
+    .map((h) => `${h.match_type}:${h.target} -> ${h.matched_value}`)
+    .join("\n") || "none";
+  const families = f.source_family_presence || {};
+  return [
+    `Corroboration score: ${fmt(f.source_corroboration_score)} (${f.source_confidence_label || "low"})`,
+    `Independent sources: ${Number(f.source_corroboration_count || 0)}`,
+    `Families: core=${families.core ? "yes" : "no"} | open=${families.open ? "yes" : "no"} | vendor=${families.vendor ? "yes" : "no"} | national=${families.national ? "yes" : "no"} | telemetry=${families.telemetry ? "yes" : "no"}`,
+    `Regional escalation badges: ${badges}`,
+    `Asset mapping score: ${fmt(f.asset_mapping_score)}`,
+    `Asset matches:`,
+    assetHits,
+    `Patch matrix: ${f.patch_availability_summary || patchMatrixPreview(f.patch_availability_matrix) || "none"}`,
+  ].join("\n");
 }
 
 function sortFindings(list) {
@@ -372,6 +406,9 @@ function renderCards() {
         ${hasMsrcSignal(f) ? `<span class="badge badge-vendor">MSRC</span>` : ""}
         ${hasRedHatSignal(f) ? `<span class="badge badge-vendor">Red Hat</span>` : ""}
         ${hasDebianSignal(f) ? `<span class="badge badge-distro">Debian</span>` : ""}
+        <span class="badge badge-phase5">corr ${fmt(f.source_corroboration_score)}</span>
+        ${(f.asset_mapping_hits || []).length ? `<span class="badge badge-phase5">asset ${(f.asset_mapping_hits || []).length}</span>` : ""}
+        ${(f.regional_escalation_badges || []).length ? `<span class="badge badge-alert">escalation ${(f.regional_escalation_badges || []).length}</span>` : ""}
       </div>
       <p class="tech-line">Ecosystems: ${textPreview(f.ecosystems)}</p>
       <p class="tech-line">Fixes: ${textPreview(f.fixed_versions)}</p>
@@ -448,7 +485,7 @@ async function selectFinding(f) {
     `Evidence: ${fmt(f.evidence_score)} | Change: ${f.change_type || "new"} | ` +
     `EPSS: ${fmt(f.epss_score)} | KEV: ${f.kev_status ? "Yes" : "No"} | ` +
     `Fix: ${f.has_fix ? "Yes" : "No"} | Scope: ${f.asset_in_scope ? "Yes" : "No"} | ` +
-    `Vendor corroboration: ${hasVendorCorroboration(f) ? "Yes" : "No"} | Distro context: ${hasDistroContext(f) ? "Yes" : "No"}`;
+    `Vendor corroboration: ${hasVendorCorroboration(f) ? "Yes" : "No"} | Distro context: ${hasDistroContext(f) ? "Yes" : "No"} | Corroboration score: ${fmt(f.source_corroboration_score)} (${f.source_confidence_label || "low"})`;
 
   el.triageEditState.value = f.triage_state || "new";
   el.triageEditNote.value = f.triage_note || "";
@@ -456,6 +493,9 @@ async function selectFinding(f) {
   renderMitrePanel(f);
   if (el.vendorSummary) {
     el.vendorSummary.textContent = vendorCorroborationSummary(f);
+  }
+  if (el.phase5Summary) {
+    el.phase5Summary.textContent = phase5SummaryText(f);
   }
   el.detailContent.textContent = "Loading report...";
 

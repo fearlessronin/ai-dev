@@ -13,19 +13,56 @@
     "priority_reason",
     "evidence_score",
     "change_type",
-    "triage_state"
+    "triage_state",
+    "source_corroboration_score",
+    "patch_availability_matrix"
   ],
   "properties": {
-    "schema_version": { "const": "1.0" },
-    "cve_id": { "type": "string", "minLength": 1 },
-    "published": { "type": "string" },
-    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
-    "summary": { "type": "string" },
-    "priority_score": { "type": "number", "minimum": 0, "maximum": 1 },
-    "priority_reason": { "type": "string" },
-    "evidence_score": { "type": "number", "minimum": 0, "maximum": 1 },
-    "change_type": { "type": "string" },
-    "triage_state": { "type": "string" }
+    "schema_version": {
+      "const": "1.1"
+    },
+    "cve_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "published": {
+      "type": "string"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "summary": {
+      "type": "string"
+    },
+    "priority_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "priority_reason": {
+      "type": "string"
+    },
+    "evidence_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "change_type": {
+      "type": "string"
+    },
+    "triage_state": {
+      "type": "string"
+    },
+    "source_corroboration_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "patch_availability_matrix": {
+      "type": "object"
+    }
   },
   "additionalProperties": true
 }

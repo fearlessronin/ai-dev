@@ -454,3 +454,16 @@ button {
   border-color: #d8d1b4;
   background: #fbf6dd;
 }
+
+
+.badge-phase5 {
+  border-color: rgba(255, 191, 71, 0.35);
+  background: rgba(255, 191, 71, 0.14);
+  color: #ffd58f;
+}
+
+.badge-alert {
+  border-color: rgba(255, 107, 107, 0.35);
+  background: rgba(255, 107, 107, 0.13);
+  color: #ffb5b5;
+}

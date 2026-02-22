@@ -115,6 +115,19 @@ class Reporter:
             "change_reason": finding.change_reason,
             "priority_score": finding.priority_score,
             "priority_reason": finding.priority_reason,
+            "source_corroboration_score": finding.source_corroboration_score,
+            "source_corroboration_count": finding.source_corroboration_count,
+            "source_confidence_label": finding.source_confidence_label,
+            "source_corroboration_sources": finding.source_corroboration_sources,
+            "source_family_presence": finding.source_family_presence,
+            "vendor_advisory_count": finding.vendor_advisory_count,
+            "national_feed_count": finding.national_feed_count,
+            "regional_escalation_badges": finding.regional_escalation_badges,
+            "asset_mapping_hits": finding.asset_mapping_hits,
+            "asset_mapping_score": finding.asset_mapping_score,
+            "asset_mapping_summary": finding.asset_mapping_summary,
+            "patch_availability_matrix": finding.patch_availability_matrix,
+            "patch_availability_summary": finding.patch_availability_summary,
         }
         missing = [key for key in REQUIRED_FINDING_FIELDS if key not in payload]
         if missing:
@@ -172,6 +185,11 @@ class Reporter:
 - ATT&CK feed version: {finding.attack_feed_version or "N/A"}
 - Regional/National sources: {", ".join(finding.regional_sources) if finding.regional_sources else "N/A"}
 - Regional signal count: {finding.regional_signal_count}
+- Source corroboration score: {finding.source_corroboration_score:.2f} ({finding.source_confidence_label})
+- Source corroboration count: {finding.source_corroboration_count}
+- Corroborating sources: {", ".join(finding.source_corroboration_sources) if finding.source_corroboration_sources else "N/A"}
+- Regional escalation badges: {", ".join(finding.regional_escalation_badges) if finding.regional_escalation_badges else "N/A"}
+- Patch availability matrix: {finding.patch_availability_summary or "N/A"}
 
 ## Ecosystem and Fix Context
 - CNA org ID: {finding.cna_org_id or "N/A"}
@@ -181,6 +199,8 @@ class Reporter:
 - Matching CPEs: {", ".join(finding.cpe_uris) if finding.cpe_uris else "N/A"}
 - Has fix version: {"Yes" if finding.has_fix else "No"}
 - Fixed versions: {", ".join(finding.fixed_versions) if finding.fixed_versions else "N/A"}
+- Asset mapping score: {finding.asset_mapping_score:.2f}
+- Asset mapping summary: {finding.asset_mapping_summary or "N/A"}
 
 ## Phase 3 Evidence Correlation
 - Evidence score: {finding.evidence_score:.2f}

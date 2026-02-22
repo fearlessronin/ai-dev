@@ -25,6 +25,9 @@ Continuously ingests CVEs from a configurable lookback window, enriches them wit
 | Microsoft Security Response Center (MSRC) | API/HTML source (best-effort) | Vendor confirmation signal for Microsoft-covered CVEs |
 | Red Hat Security Data API | API | Vendor product/package/advisory context and fix-state signals |
 | Debian Security Tracker | API/JSON data source | Distro package/release fixed-version context |
+| CISA ICS advisories | Public web advisory source (HTML parsed) | ICS/OT national advisory corroboration and escalation signals |
+| CERT-FR advisories | Public web advisory source (HTML parsed) | French national advisory corroboration and regional escalation signals |
+| BSI/CERT-Bund advisories | Public web advisory source (HTML parsed) | German national advisory corroboration and regional escalation signals |
 | MITRE ATT&CK feed metadata | Data source (JSON feed) | Feed freshness/version context |
 | OpenVEX | Local data source (file path) | Not-affected/affected override signal |
 | CSAF/global feeds | Data source/feed (configurable URLs) | Regional/national signal matching by CVE |
@@ -40,6 +43,10 @@ Continuously ingests CVEs from a configurable lookback window, enriches them wit
 - Triage states and notes: `new`, `investigating`, `mitigated`, `accepted_risk`.
 - Contradiction flags help resolve conflicting source data quickly.
 - Runtime polling controls and per-source freshness help analysts tune collection cadence and validate recency.
+- Phase 5 corroboration scoring quantifies independent source confirmation (core/open/vendor/national/telemetry).
+- Regional escalation badges highlight multi-country / transatlantic advisory overlap (e.g., CISA + CERT-FR / BSI).
+- Patch availability matrix summarizes patch/fix presence across NVD, CVE.org, OSV, and vendor/distro advisories.
+- Asset mapping by package/ecosystem/CPE improves prioritization against your configured environment scope.
 
 ## Benefits For Researchers
 
@@ -105,6 +112,15 @@ Dashboard Poll Controls (top bar):
 - Interval slider: set polling cadence at runtime.
 - `Poll Now` button: trigger an immediate full-source refresh.
 - Source freshness cards: per-source status, last polled time, last success time, duration, records, and last error.
+
+## Phase 5 (Corroboration + Patch Matrix + Asset Mapping)
+
+The dashboard now surfaces Phase 5 correlation context per finding:
+- Source corroboration score + confidence label (`low` / `medium` / `high`)
+- Independent corroborating source count and source-family presence (core/open/vendor/national/telemetry)
+- Regional escalation badges (multi-national and transatlantic combinations)
+- Asset mapping hits against `TARGET_PACKAGES`, `TARGET_ECOSYSTEMS`, and `TARGET_CPES`
+- Patch availability matrix summary across `NVD`, `CVE.org`, `OSV`, `MSRC`, `Red Hat`, and `Debian`
 
 ## No-API Demo Mode
 

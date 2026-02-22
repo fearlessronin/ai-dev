@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
 
 REQUIRED_FINDING_FIELDS = [
     "schema_version",
@@ -13,4 +13,7 @@ REQUIRED_FINDING_FIELDS = [
     "evidence_score",
     "change_type",
     "triage_state",
+    "source_corroboration_score",
+    "patch_availability_matrix",
 ]
+

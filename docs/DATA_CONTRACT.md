@@ -5,9 +5,9 @@
 ## Schema Version
 
 - Field: `schema_version`
-- Current value: `1.0`
+- Current value: `1.1`
 
-## Required Fields (v1.0)
+## Required Fields (v1.1)
 
 - `schema_version`
 - `cve_id`
@@ -19,9 +19,21 @@
 - `evidence_score`
 - `change_type`
 - `triage_state`
+- `source_corroboration_score`
+- `patch_availability_matrix`
 
 ## Notes
 
 - New fields may be added over time. Consumers should ignore unknown fields.
 - Any breaking contract change increments `schema_version`.
 - Reporter enforces required field presence before writing each record.
+
+
+## Phase 5 additive fields (selected)
+
+Examples of new Phase 5 fields now emitted:
+- `source_corroboration_count`, `source_corroboration_score`, `source_confidence_label`
+- `source_corroboration_sources`, `source_family_presence`
+- `regional_escalation_badges`
+- `asset_mapping_hits`, `asset_mapping_score`, `asset_mapping_summary`
+- `patch_availability_matrix`, `patch_availability_summary`
