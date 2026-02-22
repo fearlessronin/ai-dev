@@ -208,7 +208,20 @@ class CVEWatcher:
         if source not in SOURCE_NAMES:
             raise ValueError(f"Unsupported source: {name}")
 
-        candidate_sources = {"epss", "cveorg", "osv", "ghsa", "circl", "regional", "msrc", "redhat", "debian", "cisa_ics", "certfr", "bsi"}
+        candidate_sources = {
+            "epss",
+            "cveorg",
+            "osv",
+            "ghsa",
+            "circl",
+            "regional",
+            "msrc",
+            "redhat",
+            "debian",
+            "cisa_ics",
+            "certfr",
+            "bsi",
+        }
         candidate_ids = list(self._last_candidate_ids)
         if source in candidate_sources and not candidate_ids:
             raise ValueError("No cached candidate IDs available. Run a full poll first.")

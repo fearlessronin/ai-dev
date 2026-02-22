@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 VENDOR_SOURCES = {"msrc", "red hat security data api", "debian security tracker"}
@@ -72,13 +71,17 @@ def _is_national_source(source: str) -> bool:
     return any(k in s for k in keywords)
 
 
-def _source_family_flags(analysis: Any, cveorg_entry: dict[str, Any] | None, osv_entry: dict[str, Any] | None) -> dict[str, bool]:
+def _source_family_flags(
+    analysis: Any, cveorg_entry: dict[str, Any] | None, osv_entry: dict[str, Any] | None
+) -> dict[str, bool]:
     regional = [_norm(s) for s in getattr(analysis, "regional_sources", [])]
     has_vendor = any(s in VENDOR_SOURCES for s in regional)
     has_national = any(_is_national_source(s) for s in regional)
     has_core = True  # NVD is the primary feed
     has_open = bool(cveorg_entry) or bool(osv_entry) or bool(getattr(analysis, "ghsa_ids", []))
-    has_telemetry = bool(getattr(analysis, "epss_score", None) is not None) or bool(getattr(analysis, "kev_status", False))
+    has_telemetry = bool(getattr(analysis, "epss_score", None) is not None) or bool(
+        getattr(analysis, "kev_status", False)
+    )
     return {
         "core": has_core,
         "vendor": has_vendor,
@@ -88,7 +91,9 @@ def _source_family_flags(analysis: Any, cveorg_entry: dict[str, Any] | None, osv
     }
 
 
-def _independent_sources(analysis: Any, cveorg_entry: dict[str, Any] | None, osv_entry: dict[str, Any] | None) -> list[str]:
+def _independent_sources(
+    analysis: Any, cveorg_entry: dict[str, Any] | None, osv_entry: dict[str, Any] | None
+) -> list[str]:
     sources: set[str] = {"NVD"}
     if cveorg_entry:
         sources.add("CVE.org")
@@ -142,7 +147,11 @@ def _asset_mapping_hits(
     hits: list[dict[str, str]] = []
     seen: set[tuple[str, str, str]] = set()
 
-    packages = [str(x) for x in (getattr(analysis, "packages", []) + getattr(analysis, "affected_products", [])) if str(x).strip()]
+    packages = [
+        str(x)
+        for x in (getattr(analysis, "packages", []) + getattr(analysis, "affected_products", []))
+        if str(x).strip()
+    ]
     ecosystems = [str(x) for x in getattr(analysis, "ecosystems", []) if str(x).strip()]
     cpes = [str(x) for x in getattr(analysis, "cpe_uris", []) if str(x).strip()]
 
@@ -194,16 +203,44 @@ def _patch_matrix(
 ) -> dict[str, dict[str, Any]]:
     cveorg_fixes = _cveorg_fixed_versions(cveorg_entry)
     osv_fixes = _osv_fixed_versions(osv_entry)
-    redhat_fixes = [str(x) for x in getattr(analysis, "fixed_versions", []) if str(x).startswith("RHSA-") or "red hat" in _norm(str(x))]
-    debian_fixes = [str(x) for x in getattr(analysis, "fixed_versions", []) if ":" in str(x) and any(rel in str(x).lower() for rel in ("bookworm", "bullseye", "buster", "sid", "trixie"))]
+    redhat_fixes = [
+        str(x)
+        for x in getattr(analysis, "fixed_versions", [])
+        if str(x).startswith("RHSA-") or "red hat" in _norm(str(x))
+    ]
+    debian_fixes = [
+        str(x)
+        for x in getattr(analysis, "fixed_versions", [])
+        if ":" in str(x) and any(rel in str(x).lower() for rel in ("bookworm", "bullseye", "buster", "sid", "trixie"))
+    ]
 
     matrix = {
         "nvd": {"present": True, "fix_available": False, "evidence": "NVD candidate feed"},
-        "cveorg": {"present": bool(cveorg_entry), "fix_available": bool(cveorg_fixes), "evidence": f"fixed_versions={len(cveorg_fixes)}"},
-        "osv": {"present": bool(osv_entry), "fix_available": bool(osv_fixes), "evidence": f"fixed_events={len(osv_fixes)}"},
-        "msrc": {"present": bool(msrc_entry), "fix_available": None, "evidence": "vendor advisory match" if msrc_entry else "none"},
-        "redhat": {"present": bool(redhat_entry), "fix_available": bool(redhat_fixes), "evidence": f"fix_artifacts={len(redhat_fixes)}"},
-        "debian": {"present": bool(debian_entry), "fix_available": bool(debian_fixes), "evidence": f"release_fixes={len(debian_fixes)}"},
+        "cveorg": {
+            "present": bool(cveorg_entry),
+            "fix_available": bool(cveorg_fixes),
+            "evidence": f"fixed_versions={len(cveorg_fixes)}",
+        },
+        "osv": {
+            "present": bool(osv_entry),
+            "fix_available": bool(osv_fixes),
+            "evidence": f"fixed_events={len(osv_fixes)}",
+        },
+        "msrc": {
+            "present": bool(msrc_entry),
+            "fix_available": None,
+            "evidence": "vendor advisory match" if msrc_entry else "none",
+        },
+        "redhat": {
+            "present": bool(redhat_entry),
+            "fix_available": bool(redhat_fixes),
+            "evidence": f"fix_artifacts={len(redhat_fixes)}",
+        },
+        "debian": {
+            "present": bool(debian_entry),
+            "fix_available": bool(debian_fixes),
+            "evidence": f"release_fixes={len(debian_fixes)}",
+        },
     }
     matrix["vendor_any"] = {
         "present": bool(msrc_entry or redhat_entry or debian_entry),
@@ -217,7 +254,9 @@ def _patch_matrix_summary(matrix: dict[str, dict[str, Any]]) -> str:
     parts = []
     for key in ("nvd", "cveorg", "osv", "msrc", "redhat", "debian"):
         row = matrix.get(key, {})
-        parts.append(f"{key.upper()}: present={_bool_label(row.get('present'))}, fix={_bool_label(row.get('fix_available'))}")
+        parts.append(
+            f"{key.upper()}: present={_bool_label(row.get('present'))}, fix={_bool_label(row.get('fix_available'))}"
+        )
     return " | ".join(parts)
 
 
@@ -263,12 +302,17 @@ def apply_phase5_features(
     analysis.source_confidence_label = confidence_label
     analysis.source_corroboration_sources = independent
     analysis.source_family_presence = {k: bool(v) for k, v in family_flags.items()}
-    analysis.vendor_advisory_count = sum(1 for s in getattr(analysis, "regional_sources", []) if _norm(s) in VENDOR_SOURCES)
+    analysis.vendor_advisory_count = sum(
+        1 for s in getattr(analysis, "regional_sources", []) if _norm(s) in VENDOR_SOURCES
+    )
     analysis.national_feed_count = sum(1 for s in getattr(analysis, "regional_sources", []) if _is_national_source(s))
     analysis.regional_escalation_badges = badges
     analysis.asset_mapping_hits = asset_hits
     analysis.asset_mapping_score = asset_score
-    analysis.asset_mapping_summary = "; ".join(f"{h['match_type']}:{h['target']}->{h['matched_value']}" for h in asset_hits[:5]) or "no configured asset matches"
+    analysis.asset_mapping_summary = (
+        "; ".join(f"{h['match_type']}:{h['target']}->{h['matched_value']}" for h in asset_hits[:5])
+        or "no configured asset matches"
+    )
     analysis.patch_availability_matrix = patch_matrix
     analysis.patch_availability_summary = _patch_matrix_summary(patch_matrix)
     return analysis

@@ -16,4 +16,3 @@ REQUIRED_FINDING_FIELDS = [
     "source_corroboration_score",
     "patch_availability_matrix",
 ]
-

@@ -82,5 +82,6 @@ class PollControllerTests(unittest.TestCase):
             status = ctl.trigger_source("invalid")
             self.assertEqual(status["trigger_result"], "invalid_source")
 
+
 if __name__ == "__main__":
     unittest.main()

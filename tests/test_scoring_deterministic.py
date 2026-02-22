@@ -144,4 +144,3 @@ def _analysis(cve_id: str, priority: float, has_fix: bool) -> AnalysisResult:
 
 if __name__ == "__main__":
     unittest.main()
-

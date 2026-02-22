@@ -361,7 +361,9 @@ class PollController:
                         "source": (str(item.get("source")) if item.get("source") is not None else None),
                         "records_polled": item.get("records_polled"),
                         "failed_sources": [str(x) for x in item.get("failed_sources", []) if str(x)],
-                        "source_counts": item.get("source_counts", {}) if isinstance(item.get("source_counts"), dict) else {},
+                        "source_counts": item.get("source_counts", {})
+                        if isinstance(item.get("source_counts"), dict)
+                        else {},
                     }
                 )
             self._history = normalized

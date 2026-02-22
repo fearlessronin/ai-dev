@@ -149,6 +149,12 @@ class Reporter:
         contradiction_lines = (
             "\n".join(f"- {x}" for x in finding.contradiction_flags) if finding.contradiction_flags else "- None"
         )
+        corroborating_sources_line = (
+            ", ".join(finding.source_corroboration_sources) if finding.source_corroboration_sources else "N/A"
+        )
+        regional_escalation_badges_line = (
+            ", ".join(finding.regional_escalation_badges) if finding.regional_escalation_badges else "N/A"
+        )
 
         content = f"""# {cve.cve_id}
 
@@ -187,8 +193,8 @@ class Reporter:
 - Regional signal count: {finding.regional_signal_count}
 - Source corroboration score: {finding.source_corroboration_score:.2f} ({finding.source_confidence_label})
 - Source corroboration count: {finding.source_corroboration_count}
-- Corroborating sources: {", ".join(finding.source_corroboration_sources) if finding.source_corroboration_sources else "N/A"}
-- Regional escalation badges: {", ".join(finding.regional_escalation_badges) if finding.regional_escalation_badges else "N/A"}
+- Corroborating sources: {corroborating_sources_line}
+- Regional escalation badges: {regional_escalation_badges_line}
 - Patch availability matrix: {finding.patch_availability_summary or "N/A"}
 
 ## Ecosystem and Fix Context
