@@ -135,6 +135,20 @@ python -m cve_agent.cli serve --host 127.0.0.1 --port 8080
 Demo data source:
 - `demo/findings.demo.jsonl`
 
+## Post-Upgrade Reprocess (Backfill New Fields)
+
+After adding new enrichment/scoring fields (for example, Phase 5 corroboration and patch-matrix fields), existing rows in `output/findings.jsonl` will not automatically contain those fields.
+
+Run a one-time reprocess pass to backfill existing findings:
+
+```bash
+# PowerShell
+$env:REPROCESS_SEEN='true'
+python -m cve_agent.cli once
+Remove-Item Env:REPROCESS_SEEN
+```
+
+This re-evaluates previously seen CVEs and rewrites findings/reports with the latest enrichment logic.
 ## Pre-commit
 
 Install hooks:
@@ -212,3 +226,4 @@ When adding, removing, or changing a data source, update this README section:
 - `Data Feeds Included`
 - any related config variables in `Configuration`
 - relevant analyst/researcher impact notes
+
