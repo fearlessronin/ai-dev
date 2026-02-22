@@ -145,7 +145,7 @@ function resetDetailPanel(message) {
     el.vendorSummary.textContent = "Select a finding to view vendor and distro corroboration details.";
   }
   if (el.phase5Summary) {
-    el.phase5Summary.textContent = "Select a finding to view corroboration scoring, regional escalation badges, asset mapping, and patch matrix.";
+    el.phase5Summary.textContent = "Select a finding to view source corroboration, regional escalation, asset matches, and patch availability.";
   }
   el.detailContent.textContent = message;
 }
@@ -777,6 +777,7 @@ function bindEvents() {
   }, 15000);
   await loadDoc("runbook", "How To Use");
 })();
+
 
 
 
