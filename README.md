@@ -46,17 +46,17 @@ Continuously ingests CVEs from a configurable lookback window, enriches them wit
 
 ## Quick Start
 
-1. Install dependencies (runtime + dev):
+1. Install via editable package metadata (recommended):
+
+```bash
+pip install -e .[dev]
+```
+
+Alternative requirements-based install:
 
 ```bash
 pip install -r requirements.txt
 pip install -r requirements-dev.txt
-```
-
-Or install via editable package metadata:
-
-```bash
-pip install -e .[dev]
 ```
 
 2. Create env file:
