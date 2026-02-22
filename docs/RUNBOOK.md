@@ -57,8 +57,9 @@ python -m cve_agent.cli serve --poll --poll-interval-minutes 30 --host 127.0.0.1
 Use the top-bar polling controls in the dashboard to:
 - enable/disable auto-poll without restart
 - change interval with the slider
-- manually trigger a full-source refresh (`Poll Now`)
+- manually trigger a full-source refresh (`Poll Now`) with clear `already running` feedback if a cycle is active
 - inspect per-source freshness and errors
+- review the recent poll-run audit trail (durations, failures, new findings)
 
 ## Configuration Reference
 

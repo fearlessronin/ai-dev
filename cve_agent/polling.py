@@ -39,6 +39,8 @@ class PollController:
         self._last_new_findings = 0
         self._next_run_at_monotonic = 0.0
         self._force_run = bool(enabled)
+        self._history_limit = 25
+        self._history: list[dict[str, Any]] = []
 
         self._load()
 
@@ -66,11 +68,24 @@ class PollController:
         return self.status()
 
     def trigger_now(self) -> dict[str, Any]:
+        trigger_result = "queued"
+        message = "poll queued"
         with self._lock:
-            self._force_run = True
-            self._persist_locked()
-        self._wake_event.set()
-        return self.status()
+            if self._is_polling:
+                trigger_result = "already_running"
+                message = "poll already in progress"
+            elif self._force_run:
+                trigger_result = "already_queued"
+                message = "poll already queued"
+            else:
+                self._force_run = True
+                self._persist_locked()
+        if trigger_result == "queued":
+            self._wake_event.set()
+        data = self.status()
+        data["trigger_result"] = trigger_result
+        data["message"] = message
+        return data
 
     def status(self) -> dict[str, Any]:
         with self._lock:
@@ -113,19 +128,39 @@ class PollController:
         try:
             new_count = self.watcher.run_once()
         except Exception as exc:
+            completed = _utc_now_iso()
+            duration_ms = self._cycle_duration_ms(self._last_cycle_started, completed)
             with self._lock:
                 self._last_cycle_error = str(exc)
-                self._last_cycle_completed = _utc_now_iso()
+                self._last_cycle_completed = completed
                 self._is_polling = False
+                self._append_history_locked(
+                    status="error",
+                    started=self._last_cycle_started,
+                    completed=completed,
+                    duration_ms=duration_ms,
+                    new_findings=0,
+                    error=str(exc),
+                )
                 self._schedule_next_locked()
                 self._persist_locked()
             return
 
+        completed = _utc_now_iso()
+        duration_ms = self._cycle_duration_ms(self._last_cycle_started, completed)
         with self._lock:
             self._last_new_findings = int(new_count)
-            self._last_cycle_completed = _utc_now_iso()
+            self._last_cycle_completed = completed
             self._last_cycle_error = None
             self._is_polling = False
+            self._append_history_locked(
+                status="ok",
+                started=self._last_cycle_started,
+                completed=completed,
+                duration_ms=duration_ms,
+                new_findings=int(new_count),
+                error="",
+            )
             self._schedule_next_locked()
             self._persist_locked()
 
@@ -134,6 +169,43 @@ class PollController:
             self._next_run_at_monotonic = time.monotonic() + (self._interval_minutes * 60)
         else:
             self._next_run_at_monotonic = 0.0
+
+    def _append_history_locked(
+        self,
+        *,
+        status: str,
+        started: str | None,
+        completed: str | None,
+        duration_ms: int | None,
+        new_findings: int,
+        error: str,
+    ) -> None:
+        sources = self.watcher.get_poll_runtime_status().get("sources", {})
+        failed_sources = sorted([name for name, row in sources.items() if (row or {}).get("status") == "error"])
+        source_counts = {name: int((row or {}).get("records") or 0) for name, row in sources.items()}
+        entry = {
+            "started": started,
+            "completed": completed,
+            "status": status,
+            "duration_ms": duration_ms,
+            "new_findings": int(new_findings),
+            "error": error,
+            "failed_sources": failed_sources,
+            "source_counts": source_counts,
+        }
+        self._history.insert(0, entry)
+        if len(self._history) > self._history_limit:
+            del self._history[self._history_limit :]
+
+    def _cycle_duration_ms(self, started: str | None, completed: str | None) -> int | None:
+        if not started or not completed:
+            return None
+        try:
+            a = datetime.fromisoformat(started)
+            b = datetime.fromisoformat(completed)
+            return max(0, int((b - a).total_seconds() * 1000))
+        except ValueError:
+            return None
 
     def _status_dict_locked(self) -> dict[str, Any]:
         next_run_in_seconds: int | None = None
@@ -150,6 +222,7 @@ class PollController:
             "last_cycle_error": self._last_cycle_error,
             "last_new_findings": self._last_new_findings,
             "next_run_in_seconds": next_run_in_seconds,
+            "history": list(self._history),
         }
 
     def _persist_locked(self) -> None:
@@ -173,3 +246,23 @@ class PollController:
             self._enabled = enabled
         if isinstance(interval, int):
             self._interval_minutes = max(1, interval)
+
+        history = payload.get("history")
+        if isinstance(history, list):
+            normalized: list[dict[str, Any]] = []
+            for item in history[: self._history_limit]:
+                if not isinstance(item, dict):
+                    continue
+                normalized.append(
+                    {
+                        "started": item.get("started"),
+                        "completed": item.get("completed"),
+                        "status": str(item.get("status", "unknown")),
+                        "duration_ms": item.get("duration_ms"),
+                        "new_findings": int(item.get("new_findings", 0) or 0),
+                        "error": str(item.get("error", "") or ""),
+                        "failed_sources": [str(x) for x in item.get("failed_sources", []) if str(x)],
+                        "source_counts": item.get("source_counts", {}) if isinstance(item.get("source_counts"), dict) else {},
+                    }
+                )
+            self._history = normalized

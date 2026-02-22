@@ -61,6 +61,7 @@ const el = {
   pollRunNow: document.getElementById("poll-run-now"),
   pollSummary: document.getElementById("poll-summary"),
   pollSources: document.getElementById("poll-sources"),
+  pollHistory: document.getElementById("poll-history"),
 };
 
 function fmt(n) {
@@ -558,11 +559,33 @@ function statusClass(status) {
   return "";
 }
 
+
+function renderPollHistory(status) {
+  if (!el.pollHistory) return;
+  const history = (status && status.history) || [];
+  if (!history.length) {
+    el.pollHistory.innerHTML = '<div class="poll-history__item">No poll runs recorded yet.</div>';
+    return;
+  }
+  el.pollHistory.innerHTML = "";
+  history.slice(0, 8).forEach((h) => {
+    const item = document.createElement("div");
+    item.className = `poll-history__item ${h.status === "error" ? "error" : ""}`.trim();
+    const completed = h.completed ? formatAgo(h.completed) : "n/a";
+    const dur = h.duration_ms == null ? "n/a" : `${h.duration_ms}ms`;
+    const failed = (h.failed_sources || []).length ? ` | failed: ${(h.failed_sources || []).join(",")}` : "";
+    const err = h.error ? ` | err: ${String(h.error).slice(0, 90)}` : "";
+    item.textContent = `${h.status || "unknown"} | ${completed} | new=${Number(h.new_findings || 0)} | dur=${dur}${failed}${err}`;
+    el.pollHistory.appendChild(item);
+  });
+}
+
 function renderPollStatus() {
   const status = state.pollStatus;
   if (!status) {
     el.pollSummary.textContent = "Poll status unavailable.";
     el.pollSources.innerHTML = "";
+    if (el.pollHistory) { el.pollHistory.innerHTML = ""; }
     return;
   }
 
@@ -575,6 +598,8 @@ function renderPollStatus() {
   const lastRun = status.last_cycle_completed ? formatAgo(status.last_cycle_completed) : "never";
   const err = status.last_cycle_error ? ` | error: ${status.last_cycle_error}` : "";
   el.pollSummary.textContent = `Status: ${active} | interval: ${status.interval_minutes}m | next run: ${nextRun} | last run: ${lastRun}${err}`;
+
+  renderPollHistory(status);
 
   const sources = status.sources || {};
   const names = Object.keys(sources).sort();
@@ -638,6 +663,9 @@ async function runPollNow() {
   }
   state.pollStatus = await res.json();
   renderPollStatus();
+  if (state.pollStatus && state.pollStatus.message && state.pollStatus.trigger_result !== "queued") {
+    el.pollSummary.textContent += ` | ${state.pollStatus.message}`;
+  }
   setTimeout(async () => {
     try {
       await loadPollStatus();

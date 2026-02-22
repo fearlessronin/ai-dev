@@ -110,8 +110,9 @@ Serve polling flags:
 Dashboard Poll Controls (top bar):
 - Auto-poll toggle: enable/disable background polling without restart.
 - Interval slider: set polling cadence at runtime.
-- `Poll Now` button: trigger an immediate full-source refresh.
+- `Poll Now` button: trigger an immediate full-source refresh (returns a clear `already running` response if a poll is in progress).
 - Source freshness cards: per-source status, last polled time, last success time, duration, records, and last error.
+- Recent Poll Runs: rolling audit trail of recent poll cycles (status, duration, new findings, failed sources, error summary).
 
 ## Phase 5 (Corroboration + Patch Matrix + Asset Mapping)
 

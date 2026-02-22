@@ -467,3 +467,34 @@ button {
   background: rgba(255, 107, 107, 0.13);
   color: #ffb5b5;
 }
+
+
+.poll-history-wrap {
+  margin-top: 0.75rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 0.75rem;
+}
+
+.poll-history-wrap h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+}
+
+.poll-history {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.poll-history__item {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+}
+
+.poll-history__item.error {
+  border-color: rgba(255, 107, 107, 0.25);
+}
