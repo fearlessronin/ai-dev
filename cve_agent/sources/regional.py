@@ -6,7 +6,6 @@ from urllib.parse import urlparse
 
 import requests
 
-
 CVE_PATTERN = re.compile(r"\bCVE-\d{4}-\d{4,}\b", re.IGNORECASE)
 
 

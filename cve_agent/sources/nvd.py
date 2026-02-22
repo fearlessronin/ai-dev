@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import requests
 
 from ..models import CVEItem
-
 
 NVD_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
 
@@ -17,7 +16,7 @@ class NVDClient:
         self._timeout = timeout_seconds
 
     def fetch_last_days(self, days: int) -> list[CVEItem]:
-        end = datetime.now(timezone.utc)
+        end = datetime.now(UTC)
         start = end - timedelta(days=days)
 
         params = {

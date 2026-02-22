@@ -5,7 +5,6 @@ from dataclasses import dataclass
 
 from .models import AnalysisResult, CVEItem
 
-
 AI_KEYWORDS = {
     "agent": 0.25,
     "agentic": 0.40,

@@ -4,7 +4,6 @@ import time
 
 import requests
 
-
 ATTACK_ENTERPRISE_URL = "https://raw.githubusercontent.com/mitre/cti/master/enterprise-attack/enterprise-attack.json"
 
 

@@ -4,7 +4,6 @@ import time
 
 import requests
 
-
 OSV_VULN_URL = "https://api.osv.dev/v1/vulns"
 OSV_QUERY_BATCH_URL = "https://api.osv.dev/v1/querybatch"
 
@@ -35,7 +34,7 @@ class OSVClient:
                 continue
 
             results = data.get("results", [])
-            for cve_id, row in zip(batch, results):
+            for cve_id, row in zip(batch, results, strict=False):
                 vulns = row.get("vulns", []) if isinstance(row, dict) else []
                 if vulns:
                     records[cve_id] = vulns[0]

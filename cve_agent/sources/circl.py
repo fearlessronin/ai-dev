@@ -4,7 +4,6 @@ import time
 
 import requests
 
-
 CIRCL_CVE_URL = "https://vulnerability.circl.lu/api/cve"
 
 

@@ -4,7 +4,6 @@ import time
 
 import requests
 
-
 EPSS_URL = "https://api.first.org/data/v1/epss"
 
 

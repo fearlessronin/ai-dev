@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import unittest
 
+from cve_agent.enrichment import apply_enrichment
 from cve_agent.models import AnalysisResult, CVEItem
 from cve_agent.sources.nvd import NVDClient
-from cve_agent.enrichment import apply_enrichment
 
 
 class IntegrationSignalsTests(unittest.TestCase):

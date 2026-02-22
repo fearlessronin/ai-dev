@@ -4,7 +4,6 @@ import time
 
 import requests
 
-
 CVE_ORG_URL = "https://cveawg.mitre.org/api/cve"
 
 

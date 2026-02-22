@@ -4,7 +4,6 @@ import time
 
 import requests
 
-
 GHSA_URL = "https://api.github.com/advisories"
 
 

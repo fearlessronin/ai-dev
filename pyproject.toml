@@ -30,10 +30,11 @@ packages = ["cve_agent", "cve_agent.sources"]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F"]
+select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-q"
+
 

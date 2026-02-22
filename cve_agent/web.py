@@ -11,7 +11,6 @@ from io import StringIO
 from pathlib import Path
 from urllib.parse import unquote
 
-
 DOC_MAP = {
     "overview": "APP_OVERVIEW.md",
     "runbook": "RUNBOOK.md",
