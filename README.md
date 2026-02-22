@@ -43,7 +43,7 @@ Continuously ingests CVEs from a configurable lookback window, enriches them wit
 - Triage states and notes: `new`, `investigating`, `mitigated`, `accepted_risk`.
 - Contradiction flags help resolve conflicting source data quickly.
 - Runtime polling controls and per-source freshness help analysts tune collection cadence and validate recency.
-- Phase 5 corroboration scoring quantifies independent source confirmation (core/open/vendor/national/telemetry).
+- Corroboration scoring quantifies independent source confirmation (core/open/vendor/national/telemetry).
 - Regional escalation badges highlight multi-country / transatlantic advisory overlap (e.g., CISA + CERT-FR / BSI).
 - Patch availability matrix summarizes patch/fix presence across NVD, CVE.org, OSV, and vendor/distro advisories.
 - Asset mapping by package/ecosystem/CPE improves prioritization against your configured environment scope.
@@ -114,9 +114,9 @@ Dashboard Poll Controls (top bar):
 - Source freshness cards: per-source status, last polled time, last success time, duration, records, and last error.
 - Recent Poll Runs: rolling audit trail of recent poll cycles (status, duration, new findings, failed sources, error summary).
 
-## Phase 5 (Corroboration + Patch Matrix + Asset Mapping)
+## Corroboration, Patch Matrix, and Asset Mapping
 
-The dashboard now surfaces Phase 5 correlation context per finding:
+The dashboard now surfaces advanced correlation context per finding:
 - Source corroboration score + confidence label (`low` / `medium` / `high`)
 - Independent corroborating source count and source-family presence (core/open/vendor/national/telemetry)
 - Regional escalation badges (multi-national and transatlantic combinations)
@@ -137,7 +137,7 @@ Demo data source:
 
 ## Post-Upgrade Reprocess (Backfill New Fields)
 
-After adding new enrichment/scoring fields (for example, Phase 5 corroboration and patch-matrix fields), existing rows in `output/findings.jsonl` will not automatically contain those fields.
+After adding new enrichment/scoring fields (for example, corroboration and patch-matrix fields), existing rows in `output/findings.jsonl` will not automatically contain those fields.
 
 Run a one-time reprocess pass to backfill existing findings:
 
@@ -226,4 +226,6 @@ When adding, removing, or changing a data source, update this README section:
 - `Data Feeds Included`
 - any related config variables in `Configuration`
 - relevant analyst/researcher impact notes
+
+
 
