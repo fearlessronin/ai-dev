@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .config import load_settings
 from .demo import seed_demo_dataset
+from .inventory import validate_inventory_file
 from .polling import PollController
 from .runner import CVEWatcher
 from .web import serve
@@ -16,7 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Agentic AI CVE watcher")
     parser.add_argument(
         "mode",
-        choices=["once", "daemon", "serve", "demo"],
+        choices=["once", "daemon", "serve", "demo", "validate-inventory"],
         help="Run one pass, continuously, launch dashboard, or seed local demo data",
     )
     parser.add_argument("--host", default="127.0.0.1", help="Dashboard host for serve mode")
@@ -26,6 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="When used with serve mode, starts background API polling on startup",
     )
+    parser.add_argument("--inventory-path", default=None, help="Inventory file path for validate-inventory mode")
     parser.add_argument(
         "--poll-interval-minutes",
         type=int,
@@ -56,6 +58,21 @@ def main() -> None:
     elif args.mode == "demo":
         target = seed_demo_dataset(settings.output_dir)
         logging.info("Demo dataset seeded at %s", target)
+    elif args.mode == "validate-inventory":
+        path_value = args.inventory_path or settings.asset_inventory_path
+        result = validate_inventory_file(path_value)
+        if result.get("ok"):
+            logging.info("Inventory validation passed: %s", result.get("path"))
+            logging.info("Inventory counts: %s", result.get("counts"))
+            logging.info(
+                "Inventory targets (preview): packages=%s ecosystems=%s cpes=%s",
+                result["targets"]["packages"][:5],
+                result["targets"]["ecosystems"][:5],
+                result["targets"]["cpes"][:5],
+            )
+        else:
+            logging.error("Inventory validation failed: %s", result.get("error"))
+            raise SystemExit(1)
     else:
         poll_controller = PollController(
             watcher=watcher,

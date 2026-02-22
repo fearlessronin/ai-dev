@@ -46,6 +46,12 @@ python -m cve_agent.cli daemon
 python -m cve_agent.cli serve --host 127.0.0.1 --port 8080
 ```
 
+### Validate asset inventory file (optional)
+
+```bash
+python -m cve_agent.cli validate-inventory --inventory-path examples/assets.inventory.json
+```
+
 ### Dashboard + background polling on startup
 
 ```bash
@@ -59,6 +65,7 @@ Use the top-bar polling controls in the dashboard to:
 - change interval with the slider
 - manually trigger a full-source refresh (`Poll Now`) with clear `already running` feedback if a cycle is active
 - inspect per-source freshness and errors
+- review per-source reliability metrics (success rate, consecutive failures, latency, stale status)
 - review the recent poll-run audit trail (durations, failures, new findings) with `Errors only` / `Source` filters
 - retry a failed/source poll directly from a history entry when troubleshooting
 
@@ -128,3 +135,8 @@ The right-side detail panel now includes a `Phase 5 Correlation` section with:
 - regional escalation badges
 - asset mapping hit summary (`TARGET_*`)
 - patch availability matrix summary
+
+
+## Patch Matrix Table
+
+The finding detail panel includes a patch matrix table that shows source-by-source patch presence and fix availability across `NVD`, `CVE.org`, `OSV`, `MSRC`, `Red Hat`, and `Debian`.

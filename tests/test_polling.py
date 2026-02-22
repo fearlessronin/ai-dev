@@ -110,6 +110,20 @@ class PollControllerTests(unittest.TestCase):
             self.assertEqual(status["requested_source"], "osv")
             self.assertIn(status["trigger_result"], {"queued", "cooldown_active", "already_queued"})
 
+    def test_status_includes_source_reliability_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            watcher = _FakeWatcher()
+            ctl = PollController(watcher, Path(td), interval_minutes=30, enabled=False)
+            ctl._run_cycle()
+            status = ctl.status()
+            nvd = status["sources"]["nvd"]
+            osv = status["sources"]["osv"]
+            self.assertIn("reliability", nvd)
+            self.assertAlmostEqual(nvd["reliability"]["success_rate"], 1.0)
+            self.assertEqual(osv["reliability"]["consecutive_failures"], 1)
+            self.assertIn("stale", nvd)
+            self.assertIn("stale_threshold_seconds", nvd)
+
 
 if __name__ == "__main__":
     unittest.main()

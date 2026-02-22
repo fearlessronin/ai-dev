@@ -29,3 +29,6 @@ run-demo:
     python -m cve_agent.cli demo
     python -m cve_agent.cli serve --host 127.0.0.1 --port 8080
 
+
+validate-inventory path="examples/assets.inventory.json":
+    python -m cve_agent.cli validate-inventory --inventory-path {{path}}

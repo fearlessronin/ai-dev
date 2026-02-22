@@ -1,0 +1,4 @@
+package,ecosystem,cpe
+acme-agent,PyPI,cpe:2.3:a:acme:agent-platform
+langchain,PyPI,
+open-webui,PyPI,cpe:2.3:a:open-webui:open-webui

@@ -1,0 +1,12 @@
+{
+  "packages": ["acme-agent", "langchain", "llamaindex"],
+  "ecosystems": ["PyPI", "npm"],
+  "cpes": ["cpe:2.3:a:acme:agent-platform"],
+  "assets": [
+    {
+      "package": ["open-webui"],
+      "ecosystem": ["PyPI"],
+      "cpe": ["cpe:2.3:a:open-webui:open-webui"]
+    }
+  ]
+}

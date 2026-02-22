@@ -44,6 +44,7 @@ class PollController:
         self._queued_source_runs: list[str] = []
         self._source_cooldown_seconds = 60
         self._source_last_manual_trigger: dict[str, str] = {}
+        self._source_reliability: dict[str, dict[str, Any]] = {}
 
         self._load()
 
@@ -314,6 +315,7 @@ class PollController:
         trigger_origin: str | None = None,
     ) -> None:
         sources = self.watcher.get_poll_runtime_status().get("sources", {})
+        self._update_source_reliability_locked(sources)
         failed_sources = sorted([name for name, row in sources.items() if (row or {}).get("status") == "error"])
         source_counts = {name: int((row or {}).get("records") or 0) for name, row in sources.items()}
         entry = {
@@ -333,6 +335,58 @@ class PollController:
         self._history.insert(0, entry)
         if len(self._history) > self._history_limit:
             del self._history[self._history_limit :]
+
+    def _default_stale_threshold_seconds(self, source: str) -> int:
+        source = str(source or "").lower()
+        fast = {"nvd", "kev", "epss", "cveorg", "osv"}
+        slow = {"attack_feed", "debian"}
+        if source in fast:
+            return 4 * 3600
+        if source in slow:
+            return 24 * 3600
+        return 12 * 3600
+
+    def _update_source_reliability_locked(self, sources: dict[str, Any]) -> None:
+        for name, row in sources.items():
+            key = str(name)
+            status = str((row or {}).get("status", "never"))
+            if status not in {"ok", "error"}:
+                continue
+            duration_ms = (row or {}).get("duration_ms")
+            metrics = dict(self._source_reliability.get(key, {}))
+            total = int(metrics.get("total_polls", 0)) + 1
+            ok_polls = int(metrics.get("ok_polls", 0)) + (1 if status == "ok" else 0)
+            error_polls = int(metrics.get("error_polls", 0)) + (1 if status == "error" else 0)
+            if status == "error":
+                consecutive_failures = int(metrics.get("consecutive_failures", 0)) + 1
+            else:
+                consecutive_failures = 0
+
+            avg_duration_ms = metrics.get("avg_duration_ms")
+            if isinstance(duration_ms, int) and duration_ms >= 0:
+                if avg_duration_ms is None:
+                    avg_duration_ms = int(duration_ms)
+                else:
+                    avg_duration_ms = int(round(((float(avg_duration_ms) * (total - 1)) + duration_ms) / total))
+                last_duration_ms = int(duration_ms)
+            else:
+                last_duration_ms = metrics.get("last_duration_ms")
+
+            metrics.update(
+                {
+                    "total_polls": total,
+                    "ok_polls": ok_polls,
+                    "error_polls": error_polls,
+                    "consecutive_failures": consecutive_failures,
+                    "success_rate": round(ok_polls / total, 3) if total else None,
+                    "avg_duration_ms": avg_duration_ms,
+                    "last_duration_ms": last_duration_ms,
+                    "last_status": status,
+                    "last_error": str((row or {}).get("last_error", "") or ""),
+                    "last_updated": _utc_now_iso(),
+                }
+            )
+            self._source_reliability[key] = metrics
 
     def _cooldown_remaining_locked(self, source: str) -> int:
         last = self._source_last_manual_trigger.get(source)
@@ -356,7 +410,24 @@ class PollController:
             cooldown = self._cooldown_remaining_locked(str(name))
             payload["cooldown_remaining_seconds"] = cooldown
             payload["last_manual_trigger"] = self._source_last_manual_trigger.get(str(name))
-            payload["queued"] = str(name) in self._queued_source_runs
+            payload["queued"] = str(name) in [
+                q.get("source") if isinstance(q, dict) else q for q in self._queued_source_runs
+            ]
+            reliability = dict(self._source_reliability.get(str(name), {}))
+            payload["reliability"] = reliability
+            threshold = self._default_stale_threshold_seconds(str(name))
+            payload["stale_threshold_seconds"] = threshold
+            payload["stale"] = False
+            last_success = payload.get("last_success")
+            if last_success:
+                try:
+                    age = int((datetime.now(UTC) - datetime.fromisoformat(str(last_success))).total_seconds())
+                    payload["last_success_age_seconds"] = max(0, age)
+                    payload["stale"] = age > threshold
+                except ValueError:
+                    payload["last_success_age_seconds"] = None
+            else:
+                payload["last_success_age_seconds"] = None
             annotated[str(name)] = payload
         return annotated
 
@@ -396,6 +467,7 @@ class PollController:
             self.watcher.get_poll_runtime_status().get("sources", {})
         )
         payload["source_last_manual_trigger"] = dict(self._source_last_manual_trigger)
+        payload["source_reliability"] = dict(self._source_reliability)
         self.status_path.parent.mkdir(parents=True, exist_ok=True)
         self.status_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
@@ -448,6 +520,10 @@ class PollController:
         source_last_manual_trigger = payload.get("source_last_manual_trigger")
         if isinstance(source_last_manual_trigger, dict):
             self._source_last_manual_trigger = {str(k): str(v) for k, v in source_last_manual_trigger.items() if str(k)}
+
+        source_reliability = payload.get("source_reliability")
+        if isinstance(source_reliability, dict):
+            self._source_reliability = {str(k): dict(v) for k, v in source_reliability.items() if isinstance(v, dict)}
 
         queued_sources = payload.get("queued_sources")
         if isinstance(queued_sources, list):

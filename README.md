@@ -46,6 +46,7 @@ Continuously ingests CVEs from a configurable lookback window, enriches them wit
 - Corroboration scoring quantifies independent source confirmation (core/open/vendor/national/telemetry).
 - Regional escalation badges highlight multi-country / transatlantic advisory overlap (e.g., CISA + CERT-FR / BSI).
 - Patch availability matrix summarizes patch/fix presence across NVD, CVE.org, OSV, and vendor/distro advisories.
+- Patch matrix table in the finding detail panel makes source-by-source patch status easier to scan.
 - Asset mapping by package/ecosystem/CPE improves prioritization against your configured environment scope.
 
 ## Benefits For Researchers
@@ -112,6 +113,7 @@ Dashboard Poll Controls (top bar):
 - Interval slider: set polling cadence at runtime.
 - `Poll Now` button: trigger an immediate full-source refresh (returns a clear `already running` response if a poll is in progress).
 - Source freshness cards: per-source status, last polled time, last success time, duration, records, and last error.
+- Source reliability metrics: per-source success rate, consecutive failures, average latency, stale status, and cooldown metadata.
 - `Poll Source` buttons: manually refresh a single source when a source is stale/erroring without forcing a full poll.
 - Source cooldowns: manual source polls enforce a short cooldown to avoid hammering upstream feeds.
 - Recent Poll Runs: rolling audit trail of recent poll cycles (status, duration, new findings, failed sources, error summary).
@@ -153,6 +155,20 @@ Remove-Item Env:REPROCESS_SEEN
 ```
 
 This re-evaluates previously seen CVEs and rewrites findings/reports with the latest enrichment logic.
+## Asset Inventory Examples and Validation
+
+Use the included examples to bootstrap inventory-driven matching:
+- `examples/assets.inventory.json`
+- `examples/assets.inventory.csv`
+
+Validate inventory format before enabling `ASSET_INVENTORY_PATH`:
+
+```bash
+python -m cve_agent.cli validate-inventory --inventory-path examples/assets.inventory.json
+just validate-inventory
+just validate-inventory path=examples/assets.inventory.csv
+```
+
 ## Pre-commit
 
 Install hooks:
@@ -176,6 +192,7 @@ pre-commit run --all-files
 - `just smoke`
 - `just validate`
 - `just run-demo`
+- `just validate-inventory` (optionally `path=examples/assets.inventory.csv`)
 
 ## Polling API
 

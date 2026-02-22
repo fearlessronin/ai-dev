@@ -97,3 +97,15 @@ Recommended workflow add-on:
 ## Asset Inventory Input (Optional)
 
 Provide `ASSET_INVENTORY_PATH` (JSON or CSV) to augment `TARGET_PACKAGES`, `TARGET_ECOSYSTEMS`, and `TARGET_CPES` matching without hardcoding all values in environment variables.
+
+
+## Source Reliability Metrics
+
+The source cards now include reliability metrics to help you judge data freshness and trustworthiness during active triage:
+- success rate
+- consecutive failures
+- average latency
+- stale status
+- manual poll cooldown / queue state
+
+Use these to decide whether to retry a source, wait for cooldown expiry, or deprioritize a stale signal temporarily.

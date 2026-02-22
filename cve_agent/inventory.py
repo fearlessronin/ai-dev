@@ -95,3 +95,30 @@ def _dedup(packages: list[str], ecosystems: list[str], cpes: list[str]) -> dict[
         "ecosystems": sorted(set(ecosystems)),
         "cpes": sorted(set(cpes)),
     }
+
+
+def validate_inventory_file(path_value: str | None) -> dict[str, Any]:
+    path_text = str(path_value or "").strip()
+    if not path_text:
+        return {"ok": False, "error": "path is required", "targets": {"packages": [], "ecosystems": [], "cpes": []}}
+    path = Path(path_text).expanduser()
+    if not path.exists() or not path.is_file():
+        return {
+            "ok": False,
+            "error": f"file not found: {path}",
+            "targets": {"packages": [], "ecosystems": [], "cpes": []},
+        }
+    targets = load_inventory_targets(str(path))
+    total = len(targets["packages"]) + len(targets["ecosystems"]) + len(targets["cpes"])
+    if total == 0:
+        return {"ok": False, "error": "no inventory targets parsed", "targets": targets}
+    return {
+        "ok": True,
+        "path": str(path.resolve()),
+        "targets": targets,
+        "counts": {
+            "packages": len(targets["packages"]),
+            "ecosystems": len(targets["ecosystems"]),
+            "cpes": len(targets["cpes"]),
+        },
+    }

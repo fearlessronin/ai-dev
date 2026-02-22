@@ -525,3 +525,29 @@ button {
 
 .poll-history__actions { margin-top: 0.25rem; }
 .poll-history__actions button { font-size: 0.72rem; padding: 0.2rem 0.45rem; }
+
+
+.patch-matrix-wrap {
+  margin-top: 0.5rem;
+  overflow-x: auto;
+}
+
+.patch-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+}
+
+.patch-matrix th,
+.patch-matrix td {
+  text-align: left;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 0.35rem 0.4rem;
+  white-space: nowrap;
+}
+
+.patch-matrix th {
+  color: rgba(255,255,255,0.75);
+}
+

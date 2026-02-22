@@ -42,6 +42,7 @@ const el = {
   vendorSummary: document.getElementById("vendor-summary"),
   phase5Panel: document.getElementById("phase5-panel"),
   phase5Summary: document.getElementById("phase5-summary"),
+  phase5PatchMatrix: document.getElementById("phase5-patch-matrix"),
   triageEditState: document.getElementById("triage-edit-state"),
   triageEditNote: document.getElementById("triage-edit-note"),
   triageSave: document.getElementById("triage-save"),
@@ -154,6 +155,25 @@ function resetDetailPanel(message) {
   el.detailContent.textContent = message;
 }
 
+
+
+function renderPatchMatrix(matrix) {
+  if (!el.phase5PatchMatrix) return;
+  if (!matrix || typeof matrix !== "object") {
+    el.phase5PatchMatrix.innerHTML = "";
+    return;
+  }
+  const order = ["nvd", "cveorg", "osv", "msrc", "redhat", "debian"];
+  const rows = order.filter((k) => matrix[k]).map((k) => {
+    const row = matrix[k] || {};
+    const fix = row.fix_available === null || row.fix_available === undefined ? "unknown" : row.fix_available ? "yes" : "no";
+    const present = row.present ? "yes" : "no";
+    return `<tr><td>${k.toUpperCase()}</td><td>${present}</td><td>${fix}</td><td>${row.evidence || ""}</td></tr>`;
+  });
+  el.phase5PatchMatrix.innerHTML = rows.length
+    ? `<table class="patch-matrix"><thead><tr><th>Source</th><th>Present</th><th>Fix</th><th>Evidence</th></tr></thead><tbody>${rows.join("")}</tbody></table>`
+    : "";
+}
 
 function patchMatrixPreview(matrix) {
   if (!matrix || typeof matrix !== "object") return "none";
@@ -508,6 +528,7 @@ async function selectFinding(f) {
   if (el.phase5Summary) {
     el.phase5Summary.textContent = phase5SummaryText(f);
   }
+  renderPatchMatrix(f.patch_availability_matrix);
   el.detailContent.textContent = "Loading report...";
 
   try {
