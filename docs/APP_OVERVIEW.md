@@ -55,14 +55,15 @@ AI CVE Watcher continuously ingests newly published CVEs, identifies entries lik
 10. `cve_agent.web` serves:
 - static UI files in `frontend/`
 - JSON APIs: `/api/findings`, `/api/poll/status`
-- mutation APIs: `POST /api/triage/<CVE-ID>`, `POST /api/poll/config`, `POST /api/poll/run`
+- mutation APIs: `POST /api/triage/<CVE-ID>`, `POST /api/poll/config`, `POST /api/poll/run`, `POST /api/poll/run-source`, `POST /api/poll/retry-history`
 - report API: `/api/report/<CVE-ID>`
 - CSV export: `/api/export.csv`
 
 ## Project structure
 
 - `cve_agent/cli.py`: command entrypoint (`once`, `daemon`, `serve`, `demo`)
-- `cve_agent/config.py`: env-driven settings loader
+- `cve_agent/config.py`: env-driven settings loader (merges optional inventory-file targets)
+- `cve_agent/inventory.py`: JSON/CSV asset inventory target loader
 - `cve_agent/runner.py`: orchestration loop and source telemetry capture
 - `cve_agent/polling.py`: runtime poll controller + persistence
 - `cve_agent/sources/*.py`: external data clients/adapters

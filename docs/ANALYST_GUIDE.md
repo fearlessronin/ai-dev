@@ -84,3 +84,16 @@ Recommended workflow add-on:
 - Use `Poll Source` from the source freshness cards to refresh one feed without waiting for a full polling cycle.
 - Use `Recent Poll Runs` filters (`Errors only`, `Source`) to isolate source-specific failures quickly.
 - Use the `High corroboration only` filter or sort by `Corroboration` / `Asset Mapping` for focused triage.
+
+
+## Manual Source Polling Guidance
+
+- Use `Poll Source` for targeted refreshes when one feed is stale or failing.
+- Respect source cooldowns shown on source cards; repeated clicks will be rate-limited.
+- Use `Retry` from `Recent Poll Runs` to quickly re-run a failed source poll.
+- History entries include trigger origin (`manual_ui_source`, `manual_ui_retry`, `startup_auto`, `auto_schedule`) for audit context.
+
+
+## Asset Inventory Input (Optional)
+
+Provide `ASSET_INVENTORY_PATH` (JSON or CSV) to augment `TARGET_PACKAGES`, `TARGET_ECOSYSTEMS`, and `TARGET_CPES` matching without hardcoding all values in environment variables.

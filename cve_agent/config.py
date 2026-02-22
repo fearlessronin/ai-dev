@@ -6,6 +6,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from .inventory import load_inventory_targets
+
 
 @dataclass(frozen=True)
 class Settings:
@@ -25,6 +27,7 @@ class Settings:
     csaf_feed_urls: list[str]
     regional_rss_urls: list[str]
     jvn_api_template: str
+    asset_inventory_path: str | None
 
 
 def _csv_env(name: str) -> list[str]:
@@ -58,6 +61,9 @@ def load_settings() -> Settings:
         "https://advisories.ncsc.nl/service/",
     ]
 
+    inventory_path = os.getenv("ASSET_INVENTORY_PATH") or None
+    inventory_targets = load_inventory_targets(inventory_path)
+
     return Settings(
         nvd_api_key=os.getenv("NVD_API_KEY") or None,
         github_token=os.getenv("GITHUB_TOKEN") or None,
@@ -68,9 +74,9 @@ def load_settings() -> Settings:
         state_file=Path(os.getenv("STATE_FILE", str(state_default))).resolve(),
         log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
         source_cache_ttl_minutes=max(1, int(os.getenv("SOURCE_CACHE_TTL_MINUTES", "15"))),
-        target_ecosystems=_csv_env("TARGET_ECOSYSTEMS"),
-        target_packages=_csv_env("TARGET_PACKAGES"),
-        target_cpes=_csv_env("TARGET_CPES"),
+        target_ecosystems=sorted(set(_csv_env("TARGET_ECOSYSTEMS") + inventory_targets["ecosystems"])),
+        target_packages=sorted(set(_csv_env("TARGET_PACKAGES") + inventory_targets["packages"])),
+        target_cpes=sorted(set(_csv_env("TARGET_CPES") + inventory_targets["cpes"])),
         reprocess_seen=_bool_env("REPROCESS_SEEN", False),
         csaf_feed_urls=_csv_env("CSAF_FEED_URLS") or default_csaf,
         regional_rss_urls=_csv_env("REGIONAL_RSS_URLS") or default_rss,
@@ -78,4 +84,5 @@ def load_settings() -> Settings:
             "JVN_API_TEMPLATE",
             "https://jvndb.jvn.jp/en/myjvn?method=getVulnOverviewList&cveId={cve_id}",
         ),
+        asset_inventory_path=inventory_path,
     )

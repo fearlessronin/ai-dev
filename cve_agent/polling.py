@@ -42,6 +42,8 @@ class PollController:
         self._history_limit = 25
         self._history: list[dict[str, Any]] = []
         self._queued_source_runs: list[str] = []
+        self._source_cooldown_seconds = 60
+        self._source_last_manual_trigger: dict[str, str] = {}
 
         self._load()
 
@@ -68,7 +70,7 @@ class PollController:
         self._wake_event.set()
         return self.status()
 
-    def trigger_now(self) -> dict[str, Any]:
+    def trigger_now(self, origin: str = "manual_api") -> dict[str, Any]:
         trigger_result = "queued"
         message = "poll queued"
         with self._lock:
@@ -86,9 +88,10 @@ class PollController:
         data = self.status()
         data["trigger_result"] = trigger_result
         data["message"] = message
+        data["trigger_origin"] = origin
         return data
 
-    def trigger_source(self, source: str) -> dict[str, Any]:
+    def trigger_source(self, source: str, origin: str = "manual_api") -> dict[str, Any]:
         source_name = str(source or "").strip().lower()
         valid_sources = set(self.watcher.supported_poll_sources())
         if source_name not in valid_sources:
@@ -100,14 +103,19 @@ class PollController:
         trigger_result = "queued"
         message = f"source poll queued: {source_name}"
         with self._lock:
+            cooldown_remaining = self._cooldown_remaining_locked(source_name)
             if self._is_polling:
                 trigger_result = "already_running"
                 message = "poll already in progress"
+            elif cooldown_remaining > 0:
+                trigger_result = "cooldown_active"
+                message = f"source cooldown active: {source_name} ({cooldown_remaining}s)"
             elif source_name in self._queued_source_runs:
                 trigger_result = "already_queued"
                 message = f"source already queued: {source_name}"
             else:
-                self._queued_source_runs.append(source_name)
+                self._queued_source_runs.append({"source": source_name, "origin": origin})
+                self._mark_manual_source_trigger_locked(source_name)
                 self._persist_locked()
         if trigger_result == "queued":
             self._wake_event.set()
@@ -115,19 +123,37 @@ class PollController:
         data["trigger_result"] = trigger_result
         data["message"] = message
         data["requested_source"] = source_name
+        data["trigger_origin"] = origin
         return data
+
+    def retry_history_entry(self, history_index: int, origin: str = "manual_ui_retry") -> dict[str, Any]:
+        with self._lock:
+            if history_index < 0 or history_index >= len(self._history):
+                data = self._status_dict_locked()
+                data["trigger_result"] = "invalid_history_index"
+                data["message"] = f"invalid history index: {history_index}"
+                return data
+            entry = dict(self._history[history_index])
+        if entry.get("poll_kind") == "source" and entry.get("source"):
+            return self.trigger_source(str(entry.get("source")), origin=origin)
+        failed_sources = [str(x) for x in entry.get("failed_sources", []) if str(x)]
+        if failed_sources:
+            return self.trigger_source(failed_sources[0], origin=origin)
+        return self.trigger_now(origin=origin)
 
     def status(self) -> dict[str, Any]:
         with self._lock:
             data = self._status_dict_locked()
         runtime = self.watcher.get_poll_runtime_status()
-        data["sources"] = runtime.get("sources", {})
+        with self._lock:
+            data["sources"] = self._annotate_sources_with_controls_locked(runtime.get("sources", {}))
         return data
 
     def _loop(self) -> None:
         while not self._stop_event.is_set():
             should_run = False
             source_run: str | None = None
+            source_origin = "manual_api"
             wait_seconds = 1.0
 
             with self._lock:
@@ -137,7 +163,13 @@ class PollController:
                     should_run = True
                     self._force_run = False
                 elif self._queued_source_runs:
-                    source_run = self._queued_source_runs.pop(0)
+                    queued_source = self._queued_source_runs.pop(0)
+                    if isinstance(queued_source, dict):
+                        source_run = str(queued_source.get("source", "")).strip().lower() or None
+                        source_origin = str(queued_source.get("origin", "manual_api") or "manual_api")
+                    else:
+                        source_run = str(queued_source).strip().lower() or None
+                        source_origin = "manual_api"
                     should_run = False
                 elif self._enabled and now >= self._next_run_at_monotonic:
                     should_run = True
@@ -150,13 +182,13 @@ class PollController:
                 self._run_cycle()
                 continue
             if source_run:
-                self._run_source_cycle(source_run)
+                self._run_source_cycle(source_run, trigger_origin=source_origin)
                 continue
 
             self._wake_event.wait(wait_seconds)
             self._wake_event.clear()
 
-    def _run_source_cycle(self, source_name: str) -> None:
+    def _run_source_cycle(self, source_name: str, trigger_origin: str = "manual_api") -> None:
         with self._lock:
             self._is_polling = True
             self._last_cycle_started = _utc_now_iso()
@@ -181,6 +213,7 @@ class PollController:
                     error=str(exc),
                     poll_kind="source",
                     source=source_name,
+                    trigger_origin=trigger_origin,
                 )
                 self._persist_locked()
             return
@@ -202,6 +235,7 @@ class PollController:
                 poll_kind="source",
                 source=source_name,
                 records_polled=int(records),
+                trigger_origin=trigger_origin,
             )
             self._persist_locked()
 
@@ -212,6 +246,10 @@ class PollController:
             self._last_cycle_error = None
             self._persist_locked()
 
+        inferred_full_origin = "auto_schedule"
+        with self._lock:
+            if self._last_cycle_completed is None and self._enabled:
+                inferred_full_origin = "startup_auto"
         try:
             new_count = self.watcher.run_once()
         except Exception as exc:
@@ -229,6 +267,7 @@ class PollController:
                     new_findings=0,
                     error=str(exc),
                     poll_kind="full",
+                    trigger_origin=inferred_full_origin,
                 )
                 self._schedule_next_locked()
                 self._persist_locked()
@@ -249,6 +288,7 @@ class PollController:
                 new_findings=int(new_count),
                 error="",
                 poll_kind="full",
+                trigger_origin=inferred_full_origin,
             )
             self._schedule_next_locked()
             self._persist_locked()
@@ -271,6 +311,7 @@ class PollController:
         poll_kind: str = "full",
         source: str | None = None,
         records_polled: int | None = None,
+        trigger_origin: str | None = None,
     ) -> None:
         sources = self.watcher.get_poll_runtime_status().get("sources", {})
         failed_sources = sorted([name for name, row in sources.items() if (row or {}).get("status") == "error"])
@@ -285,12 +326,39 @@ class PollController:
             "poll_kind": poll_kind,
             "source": source,
             "records_polled": records_polled,
+            "trigger_origin": trigger_origin,
             "failed_sources": failed_sources,
             "source_counts": source_counts,
         }
         self._history.insert(0, entry)
         if len(self._history) > self._history_limit:
             del self._history[self._history_limit :]
+
+    def _cooldown_remaining_locked(self, source: str) -> int:
+        last = self._source_last_manual_trigger.get(source)
+        if not last:
+            return 0
+        try:
+            last_dt = datetime.fromisoformat(last)
+            now_dt = datetime.now(UTC).replace(microsecond=0)
+            elapsed = int((now_dt - last_dt).total_seconds())
+        except ValueError:
+            return 0
+        return max(0, self._source_cooldown_seconds - max(0, elapsed))
+
+    def _mark_manual_source_trigger_locked(self, source: str) -> None:
+        self._source_last_manual_trigger[source] = _utc_now_iso()
+
+    def _annotate_sources_with_controls_locked(self, runtime_sources: dict[str, Any]) -> dict[str, Any]:
+        annotated: dict[str, Any] = {}
+        for name, row in runtime_sources.items():
+            payload = dict(row or {})
+            cooldown = self._cooldown_remaining_locked(str(name))
+            payload["cooldown_remaining_seconds"] = cooldown
+            payload["last_manual_trigger"] = self._source_last_manual_trigger.get(str(name))
+            payload["queued"] = str(name) in self._queued_source_runs
+            annotated[str(name)] = payload
+        return annotated
 
     def _cycle_duration_ms(self, started: str | None, completed: str | None) -> int | None:
         if not started or not completed:
@@ -317,13 +385,17 @@ class PollController:
             "last_cycle_error": self._last_cycle_error,
             "last_new_findings": self._last_new_findings,
             "next_run_in_seconds": next_run_in_seconds,
-            "queued_sources": list(self._queued_source_runs),
+            "source_cooldown_seconds": self._source_cooldown_seconds,
+            "queued_sources": [q.get("source") if isinstance(q, dict) else q for q in self._queued_source_runs],
             "history": list(self._history),
         }
 
     def _persist_locked(self) -> None:
         payload = deepcopy(self._status_dict_locked())
-        payload["sources"] = self.watcher.get_poll_runtime_status().get("sources", {})
+        payload["sources"] = self._annotate_sources_with_controls_locked(
+            self.watcher.get_poll_runtime_status().get("sources", {})
+        )
+        payload["source_last_manual_trigger"] = dict(self._source_last_manual_trigger)
         self.status_path.parent.mkdir(parents=True, exist_ok=True)
         self.status_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
@@ -360,6 +432,7 @@ class PollController:
                         "poll_kind": str(item.get("poll_kind", "full") or "full"),
                         "source": (str(item.get("source")) if item.get("source") is not None else None),
                         "records_polled": item.get("records_polled"),
+                        "trigger_origin": item.get("trigger_origin"),
                         "failed_sources": [str(x) for x in item.get("failed_sources", []) if str(x)],
                         "source_counts": item.get("source_counts", {})
                         if isinstance(item.get("source_counts"), dict)
@@ -368,6 +441,16 @@ class PollController:
                 )
             self._history = normalized
 
+        cooldown = payload.get("source_cooldown_seconds")
+        if isinstance(cooldown, int):
+            self._source_cooldown_seconds = max(0, cooldown)
+
+        source_last_manual_trigger = payload.get("source_last_manual_trigger")
+        if isinstance(source_last_manual_trigger, dict):
+            self._source_last_manual_trigger = {str(k): str(v) for k, v in source_last_manual_trigger.items() if str(k)}
+
         queued_sources = payload.get("queued_sources")
         if isinstance(queued_sources, list):
-            self._queued_source_runs = [str(x).strip().lower() for x in queued_sources if str(x).strip()]
+            self._queued_source_runs = [
+                {"source": str(x).strip().lower(), "origin": "manual_api"} for x in queued_sources if str(x).strip()
+            ]

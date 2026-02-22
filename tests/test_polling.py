@@ -82,6 +82,34 @@ class PollControllerTests(unittest.TestCase):
             status = ctl.trigger_source("invalid")
             self.assertEqual(status["trigger_result"], "invalid_source")
 
+    def test_trigger_source_cooldown_active(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            ctl = PollController(_FakeWatcher(), Path(td), interval_minutes=30, enabled=False)
+            first = ctl.trigger_source("osv", origin="manual_ui_source")
+            self.assertEqual(first["trigger_result"], "queued")
+            second = ctl.trigger_source("osv", origin="manual_ui_source")
+            self.assertIn(second["trigger_result"], {"already_queued", "cooldown_active"})
+
+    def test_retry_history_entry_uses_source_when_present(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            watcher = _FakeWatcher()
+            ctl = PollController(watcher, Path(td), interval_minutes=30, enabled=False)
+            ctl._append_history_locked(
+                status="error",
+                started=None,
+                completed=None,
+                duration_ms=None,
+                new_findings=0,
+                error="x",
+                poll_kind="source",
+                source="osv",
+                records_polled=None,
+                trigger_origin="manual_ui_source",
+            )
+            status = ctl.retry_history_entry(0)
+            self.assertEqual(status["requested_source"], "osv")
+            self.assertIn(status["trigger_result"], {"queued", "cooldown_active", "already_queued"})
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -60,6 +60,7 @@ Use the top-bar polling controls in the dashboard to:
 - manually trigger a full-source refresh (`Poll Now`) with clear `already running` feedback if a cycle is active
 - inspect per-source freshness and errors
 - review the recent poll-run audit trail (durations, failures, new findings) with `Errors only` / `Source` filters
+- retry a failed/source poll directly from a history entry when troubleshooting
 
 ## Configuration Reference
 
@@ -75,6 +76,7 @@ Use the top-bar polling controls in the dashboard to:
 - `TARGET_ECOSYSTEMS`: comma-separated ecosystem scope
 - `TARGET_PACKAGES`: comma-separated package scope
 - `TARGET_CPES`: comma-separated CPE fragment scope
+- `ASSET_INVENTORY_PATH`: optional JSON/CSV asset inventory file (merged into `TARGET_*`)
 - `REPROCESS_SEEN`: reprocess seen CVEs for change tracking
 - `CSAF_FEED_URLS`: comma-separated CSAF/global feed URLs
 - `REGIONAL_RSS_URLS`: comma-separated RSS feed URLs
@@ -97,6 +99,7 @@ The app currently enriches with:
 - `POST /api/poll/config`
 - `POST /api/poll/run`
 - `POST /api/poll/run-source`
+- `POST /api/poll/retry-history`
 
 ## Output Files
 

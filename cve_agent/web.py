@@ -175,6 +175,8 @@ def serve(
                 return self._run_poll_now()
             if path == "/api/poll/run-source":
                 return self._run_poll_source()
+            if path == "/api/poll/retry-history":
+                return self._retry_poll_history()
 
             self.send_response(404)
             self.end_headers()
@@ -251,7 +253,9 @@ def serve(
         def _run_poll_now(self) -> None:
             if poll_controller is None:
                 return self._send_json({"error": "poll controller unavailable"}, status=503)
-            status_payload = poll_controller.trigger_now()
+            payload = self._read_json_body() or {}
+            origin = str(payload.get("origin", "manual_ui")).strip() or "manual_ui"
+            status_payload = poll_controller.trigger_now(origin=origin)
             return self._send_json(status_payload)
 
         def _run_poll_source(self) -> None:
@@ -263,8 +267,25 @@ def serve(
             source = str(payload.get("source", "")).strip().lower()
             if not source:
                 return self._send_json({"error": "source is required"}, status=400)
-            status_payload = poll_controller.trigger_source(source)
+            origin = str(payload.get("origin", "manual_ui")).strip() or "manual_ui"
+            status_payload = poll_controller.trigger_source(source, origin=origin)
             if status_payload.get("trigger_result") == "invalid_source":
+                return self._send_json(status_payload, status=400)
+            return self._send_json(status_payload)
+
+        def _retry_poll_history(self) -> None:
+            if poll_controller is None:
+                return self._send_json({"error": "poll controller unavailable"}, status=503)
+            payload = self._read_json_body()
+            if payload is None:
+                return self._send_json({"error": "invalid JSON body"}, status=400)
+            try:
+                history_index = int(payload.get("history_index", -1))
+            except (TypeError, ValueError):
+                return self._send_json({"error": "history_index must be an integer"}, status=400)
+            origin = str(payload.get("origin", "manual_ui_retry")).strip() or "manual_ui_retry"
+            status_payload = poll_controller.retry_history_entry(history_index, origin=origin)
+            if status_payload.get("trigger_result") == "invalid_history_index":
                 return self._send_json(status_payload, status=400)
             return self._send_json(status_payload)
 

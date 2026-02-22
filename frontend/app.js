@@ -615,7 +615,8 @@ function renderPollHistory(status) {
     const err = h.error ? ` | err: ${String(h.error).slice(0, 90)}` : "";
     const kind = h.poll_kind === "source" ? `source:${h.source || "unknown"}` : "full";
     const recs = h.records_polled == null ? "" : ` | records=${Number(h.records_polled || 0)}`;
-    item.textContent = `${kind} | ${h.status || "unknown"} | ${completed} | new=${Number(h.new_findings || 0)} | dur=${dur}${recs}${failed}${err}`;
+    const origin = h.trigger_origin ? ` | origin=${h.trigger_origin}` : "";
+    item.innerHTML = `<div>${kind} | ${h.status || "unknown"} | ${completed} | new=${Number(h.new_findings || 0)} | dur=${dur}${recs}${origin}${failed}${err}</div>${((h.poll_kind === "source" && h.source) || (h.failed_sources || []).length) ? `<div class="poll-history__actions"><button type="button" class="poll-history-retry" data-history-index="${history.indexOf(h)}">Retry</button></div>` : ""}`;
     el.pollHistory.appendChild(item);
   });
 }
@@ -697,11 +698,27 @@ async function savePollConfig() {
   renderPollStatus();
 }
 
+async function retryPollHistory(historyIndex) {
+  const res = await fetch("/api/poll/retry-history", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ history_index: Number(historyIndex), origin: "manual_ui_retry" }),
+  });
+  if (!res.ok) {
+    throw new Error("Failed to retry poll history entry");
+  }
+  state.pollStatus = await res.json();
+  renderPollStatus();
+  if (state.pollStatus && state.pollStatus.message) {
+    el.pollSummary.textContent += ` | ${state.pollStatus.message}`;
+  }
+}
+
 async function runPollSource(source) {
   const res = await fetch("/api/poll/run-source", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ source }),
+    body: JSON.stringify({ source, origin: "manual_ui_source" }),
   });
   if (!res.ok) {
     throw new Error("Failed to trigger source poll");
@@ -724,7 +741,7 @@ async function runPollNow() {
   const res = await fetch("/api/poll/run", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: "{}",
+    body: JSON.stringify({ origin: "manual_ui_full" }),
   });
   if (!res.ok) {
     throw new Error("Failed to trigger poll");
@@ -812,6 +829,22 @@ function bindEvents() {
       alert("Failed to trigger source poll.");
     }
   });
+
+  if (el.pollHistory) {
+    el.pollHistory.addEventListener("click", async (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const btn = target.closest(".poll-history-retry");
+      if (!(btn instanceof HTMLElement)) return;
+      const idx = btn.dataset.historyIndex;
+      if (idx == null) return;
+      try {
+        await retryPollHistory(idx);
+      } catch {
+        alert("Failed to retry poll history entry.");
+      }
+    });
+  }
 
   el.resetFilters.addEventListener("click", () => {
     el.search.value = "";

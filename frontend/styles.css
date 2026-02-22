@@ -522,3 +522,6 @@ button {
 .poll-history-controls select {
   margin-left: 0.25rem;
 }
+
+.poll-history__actions { margin-top: 0.25rem; }
+.poll-history__actions button { font-size: 0.72rem; padding: 0.2rem 0.45rem; }

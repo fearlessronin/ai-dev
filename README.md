@@ -113,8 +113,10 @@ Dashboard Poll Controls (top bar):
 - `Poll Now` button: trigger an immediate full-source refresh (returns a clear `already running` response if a poll is in progress).
 - Source freshness cards: per-source status, last polled time, last success time, duration, records, and last error.
 - `Poll Source` buttons: manually refresh a single source when a source is stale/erroring without forcing a full poll.
+- Source cooldowns: manual source polls enforce a short cooldown to avoid hammering upstream feeds.
 - Recent Poll Runs: rolling audit trail of recent poll cycles (status, duration, new findings, failed sources, error summary).
 - Poll history filters: `Errors only` and `Source` filters for fast troubleshooting.
+- Retry from history: retry a failed/source poll directly from the `Recent Poll Runs` list.
 
 ## Corroboration, Patch Matrix, and Asset Mapping
 
@@ -181,6 +183,7 @@ pre-commit run --all-files
 - `POST /api/poll/config`: update runtime polling config (`enabled`, `interval_minutes`)
 - `POST /api/poll/run`: trigger an immediate manual polling cycle
 - `POST /api/poll/run-source`: trigger a single-source polling cycle (`source`)
+- `POST /api/poll/retry-history`: retry a poll based on a history entry (`history_index`)
 
 ## Configuration
 
@@ -196,6 +199,7 @@ pre-commit run --all-files
 - `TARGET_ECOSYSTEMS`: comma-separated ecosystem scope
 - `TARGET_PACKAGES`: comma-separated package scope
 - `TARGET_CPES`: comma-separated CPE fragment scope
+- `ASSET_INVENTORY_PATH`: optional JSON/CSV inventory file to augment `TARGET_*` matching inputs
 - `REPROCESS_SEEN`: reprocess seen CVEs for change tracking (`false` default)
 - `CSAF_FEED_URLS`: comma-separated CSAF/global feed URLs
 - `REGIONAL_RSS_URLS`: comma-separated RSS feed URLs
