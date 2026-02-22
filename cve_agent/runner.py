@@ -16,12 +16,15 @@ from .reporter import Reporter
 from .sources.attack_feed import AttackFeedClient
 from .sources.circl import CIRCLClient
 from .sources.cveorg import CVEOrgClient
+from .sources.debian import DebianTrackerClient, extract_debian_context
 from .sources.epss import EPSSClient
 from .sources.ghsa import GHSAClient
 from .sources.kev import KEVClient
+from .sources.msrc import MSRCClient
 from .sources.nvd import NVDClient
 from .sources.openvex import load_openvex_map
 from .sources.osv import OSVClient
+from .sources.redhat import RedHatSecurityClient, extract_redhat_context
 from .sources.regional import RegionalIntelClient
 from .store import StateStore
 
@@ -34,6 +37,9 @@ SOURCE_NAMES = [
     "ghsa",
     "circl",
     "regional",
+    "msrc",
+    "redhat",
+    "debian",
     "openvex",
     "attack_feed",
 ]
@@ -56,6 +62,9 @@ class CVEWatcher:
             jvn_api_template=settings.jvn_api_template,
             timeout_seconds=12,
         )
+        self.msrc_client = MSRCClient(timeout_seconds=12)
+        self.redhat_client = RedHatSecurityClient(timeout_seconds=12)
+        self.debian_client = DebianTrackerClient(timeout_seconds=20, cache_ttl_minutes=30)
         self.reporter = Reporter(settings.output_dir)
         self.store = StateStore(settings.state_file)
         mappings_dir = Path(__file__).resolve().parent.parent / "mappings"
@@ -85,6 +94,9 @@ class CVEWatcher:
         ghsa_map = self._call_source("ghsa", lambda: self.ghsa_client.fetch_by_cves(candidate_ids))
         circl_map = self._call_source("circl", lambda: self.circl_client.fetch_records(candidate_ids))
         regional_map = self._call_source("regional", lambda: self.regional_client.fetch_signals(candidate_ids))
+        msrc_map = self._call_source("msrc", lambda: self.msrc_client.fetch_records(candidate_ids))
+        redhat_map = self._call_source("redhat", lambda: self.redhat_client.fetch_records(candidate_ids))
+        debian_map = self._call_source("debian", lambda: self.debian_client.fetch_records(candidate_ids))
         openvex_map = self._call_source("openvex", lambda: load_openvex_map(self.settings.openvex_path))
         attack_feed_meta = self._call_source("attack_feed", self.attack_feed_client.fetch_metadata) or {}
 
@@ -97,8 +109,16 @@ class CVEWatcher:
             osv_entry = osv_map.get(cve_id)
             ghsa_entries = ghsa_map.get(cve_id, [])
             circl_entry = circl_map.get(cve_id)
-            regional_sources = regional_map.get(cve_id, [])
+            regional_sources = list(regional_map.get(cve_id, []))
             openvex_status = openvex_map.get(cve_id)
+
+            vendor_sources, vendor_packages, vendor_fixed_versions = self._vendor_context_for_cve(
+                cve_id,
+                msrc_entry=msrc_map.get(cve_id),
+                redhat_entry=redhat_map.get(cve_id),
+                debian_entry=debian_map.get(cve_id),
+            )
+            regional_sources.extend(vendor_sources)
 
             analysis = self.correlator.correlate(analysis)
             analysis = apply_enrichment(
@@ -112,7 +132,17 @@ class CVEWatcher:
                 openvex_status=openvex_status,
                 regional_sources=regional_sources,
             )
+            analysis.packages.extend(vendor_packages)
+            analysis.fixed_versions.extend(vendor_fixed_versions)
+            analysis.affected_products.extend(vendor_packages)
             analysis.attack_feed_version = attack_feed_meta.get("version") or attack_feed_meta.get("latest_modified")
+            analysis = apply_enrichment(
+                analysis,
+                kev_entry=None,
+                epss_entry=None,
+                cveorg_entry=None,
+                osv_entry=None,
+            )
             analysis = apply_phase3_correlation(
                 analysis,
                 kev_entry=kev_entry,
@@ -156,6 +186,34 @@ class CVEWatcher:
 
     def get_poll_runtime_status(self) -> dict[str, Any]:
         return {"sources": {name: dict(data) for name, data in self._source_status.items()}}
+
+    def _vendor_context_for_cve(
+        self,
+        cve_id: str,
+        msrc_entry: dict[str, Any] | None,
+        redhat_entry: dict[str, Any] | None,
+        debian_entry: dict[str, Any] | None,
+    ) -> tuple[list[str], list[str], list[str]]:
+        sources: list[str] = []
+        packages: list[str] = []
+        fixed_versions: list[str] = []
+
+        if msrc_entry:
+            sources.append("MSRC")
+
+        if redhat_entry:
+            src, pkgs, fixes = extract_redhat_context(redhat_entry)
+            sources.extend(src)
+            packages.extend(pkgs)
+            fixed_versions.extend(fixes)
+
+        if debian_entry:
+            src, pkgs, fixes = extract_debian_context(debian_entry)
+            sources.extend(src)
+            packages.extend(pkgs)
+            fixed_versions.extend(fixes)
+
+        return sorted(set(sources)), sorted(set(packages)), sorted(set(fixed_versions))
 
     def _call_source(self, name: str, loader: Callable[[], Any]) -> Any:
         started = time.perf_counter()

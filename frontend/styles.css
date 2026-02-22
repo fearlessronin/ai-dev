@@ -426,3 +426,31 @@ button {
     grid-template-columns: 1fr;
   }
 }
+.vendor-panel {
+  margin-top: 0.8rem;
+  padding: 0.7rem;
+  border: 1px solid #dbcdb8;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+
+.vendor-panel h3 {
+  margin: 0 0 0.4rem;
+}
+
+.vendor-summary {
+  font-size: 0.86rem;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.badge-vendor {
+  border-color: #c7d8cc;
+  background: #edf8f0;
+}
+
+.badge-distro {
+  border-color: #d8d1b4;
+  background: #fbf6dd;
+}

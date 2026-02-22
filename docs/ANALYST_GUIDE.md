@@ -1,4 +1,4 @@
-﻿# Analyst Guide
+# Analyst Guide
 
 ## What This App Does
 
@@ -10,7 +10,9 @@ It combines multiple signals in one place:
 - CVE.org CNA + Vulnrichment (SSVC-style) data
 - OSV and GHSA package/fix context
 - CIRCL sightings and optional OpenVEX override status
+- Vendor/distro context from MSRC, Red Hat Security Data API, and Debian Security Tracker
 - MITRE ATLAS and ATT&CK mapping
+- Regional/national feed matching (CSAF/RSS/JVN)
 
 ## Who Should Use It
 
@@ -22,29 +24,34 @@ It combines multiple signals in one place:
 ## Daily Analyst Workflow
 
 1. Start in `Radar` view and sort by `Priority`.
-2. Apply filters:
+2. Review the polling bar at the top:
+- confirm `Auto-poll` state
+- confirm source freshness (last success / status / errors)
+- run `Poll Now` when you need an immediate refresh
+3. Apply filters:
 - `In target scope`
 - `KEV listed`
 - `Has contradictions`
 - `Min Evidence`
-3. Open top findings and read:
+4. Open top findings and read:
 - `change_type` (`new`, `priority_changed`, `newly_fixed`, `unchanged`)
 - evidence rationale and contradictions
 - recommended remediation and fixed versions
-4. Set triage state and note:
+- vendor/distro package/fix context when present (MSRC/Red Hat/Debian corroboration)
+5. Set triage state and note:
 - `new`
 - `investigating`
 - `mitigated`
 - `accepted_risk`
-5. Export CSV for ticketing/reporting workflows.
+6. Export CSV for ticketing/reporting workflows.
 
 ## Interpreting Priority
 
 Treat priority as evidence-weighted guidance, not an absolute truth.
 Use this order of confidence:
 1. KEV + high EPSS + in-scope asset match
-2. Strong package/CPE applicability and fix availability
-3. Consistent metadata across CVE.org, OSV, GHSA
+2. Strong package/CPE applicability and fix availability (including vendor/distro corroboration)
+3. Consistent metadata across CVE.org, OSV, GHSA, and vendor/distro sources
 4. No contradiction flags
 
 If OpenVEX marks a CVE as `not_affected`, validate quickly and downgrade unless other hard evidence contradicts it.
@@ -55,3 +62,4 @@ If OpenVEX marks a CVE as `not_affected`, validate quickly and downgrade unless 
 - Keep `TARGET_ECOSYSTEMS`, `TARGET_PACKAGES`, and `TARGET_CPES` tightly scoped.
 - Review contradiction flags early; they often reveal source drift or version ambiguity.
 - Treat missing fix data as uncertainty, not safety.
+- If a source card shows `error` or stale freshness, use `Poll Now` after network/API recovery.

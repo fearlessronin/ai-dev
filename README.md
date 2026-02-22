@@ -7,8 +7,8 @@ Continuously ingests CVEs from a configurable lookback window, enriches them wit
 - Pulls CVEs from NVD
 - Scores likely AI-agent / LLM ecosystem relevance
 - Correlates findings with MITRE ATLAS and MITRE ATT&CK
-- Enriches each finding with exploitability, fix, ecosystem, and regional/national intelligence signals
-- Supports triage workflow and change tracking across runs
+- Enriches each finding with exploitability, fix, ecosystem, vendor, and regional/national intelligence signals
+- Supports triage workflow, change tracking, and runtime polling controls
 - Exposes findings in dashboard, JSONL, markdown, and CSV
 
 ## Data Feeds Included
@@ -22,6 +22,9 @@ Continuously ingests CVEs from a configurable lookback window, enriches them wit
 | OSV | API | Package ecosystem and fix-version context |
 | GitHub Security Advisories (GHSA) | API | Advisory linkage, severity, package/version context |
 | CIRCL Vulnerability-Lookup | API | Sightings/external signal enrichment |
+| Microsoft Security Response Center (MSRC) | API/HTML source (best-effort) | Vendor confirmation signal for Microsoft-covered CVEs |
+| Red Hat Security Data API | API | Vendor product/package/advisory context and fix-state signals |
+| Debian Security Tracker | API/JSON data source | Distro package/release fixed-version context |
 | MITRE ATT&CK feed metadata | Data source (JSON feed) | Feed freshness/version context |
 | OpenVEX | Local data source (file path) | Not-affected/affected override signal |
 | CSAF/global feeds | Data source/feed (configurable URLs) | Regional/national signal matching by CVE |
@@ -32,17 +35,19 @@ Continuously ingests CVEs from a configurable lookback window, enriches them wit
 
 - Multi-signal prioritization reduces CVSS-only noise.
 - Scope-aware ranking via `TARGET_ECOSYSTEMS`, `TARGET_PACKAGES`, and `TARGET_CPES`.
+- Vendor and distro corroboration (MSRC, Red Hat, Debian) improves patch-context confidence.
 - Change tracking: `new`, `priority_changed`, `newly_fixed`, `unchanged`.
 - Triage states and notes: `new`, `investigating`, `mitigated`, `accepted_risk`.
 - Contradiction flags help resolve conflicting source data quickly.
-- Regional/national signal matching helps surface geographically relevant alerts.
+- Runtime polling controls and per-source freshness help analysts tune collection cadence and validate recency.
 
 ## Benefits For Researchers
 
 - Unified cross-source record for pattern and trend analysis.
 - Reprocessing support (`REPROCESS_SEEN=true`) for longitudinal comparisons.
 - Structured JSONL for downstream analytics and experiments.
-- Expanded context fields (SSVC-style, GHSA linkage, sightings, OpenVEX, regional feeds).
+- Expanded context fields (SSVC-style, GHSA linkage, sightings, OpenVEX, regional feeds, vendor/distro signals).
+- Source freshness telemetry helps evaluate collection quality and source availability over time.
 
 ## Quick Start
 
@@ -95,12 +100,12 @@ Serve polling flags:
 - `--poll`: enable background polling while the dashboard is running.
 - `--poll-interval-minutes`: override polling cadence at startup (applies to `daemon` and `serve --poll`).
 
-
 Dashboard Poll Controls (top bar):
 - Auto-poll toggle: enable/disable background polling without restart.
 - Interval slider: set polling cadence at runtime.
 - `Poll Now` button: trigger an immediate full-source refresh.
 - Source freshness cards: per-source status, last polled time, last success time, duration, records, and last error.
+
 ## No-API Demo Mode
 
 Seed a known-good local dataset and start the dashboard without API keys:

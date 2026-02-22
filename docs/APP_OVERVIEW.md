@@ -1,15 +1,16 @@
-﻿# App Overview
+# App Overview
 
 ## Purpose
 
-AI CVE Watcher continuously ingests newly published CVEs from NVD, identifies entries likely related to agentic AI risk, and produces remediation-focused documentation with evidence-weighted prioritization.
+AI CVE Watcher continuously ingests newly published CVEs, identifies entries likely related to agentic AI risk, and produces remediation-focused documentation with evidence-weighted prioritization.
 
 ## End-to-end flow
 
-1. `cve_agent.cli` starts the app in one of three modes:
+1. `cve_agent.cli` starts the app in one of four modes:
 - `once`: single ingestion/analyze/write cycle
 - `daemon`: repeated cycle on a fixed interval
 - `serve`: launches frontend dashboard server
+- `demo`: seeds a known-good local dataset for no-key demos
 
 2. `cve_agent.sources.nvd.NVDClient` fetches CVEs from NVD API for the configured rolling window (`WINDOW_DAYS`, default `30`) and extracts CPE applicability.
 
@@ -22,6 +23,10 @@ AI CVE Watcher continuously ingests newly published CVEs from NVD, identifies en
 - `cve_agent.sources.osv.OSVClient` (OSV ecosystem/package/fix context)
 - `cve_agent.sources.ghsa.GHSAClient` (GitHub advisory context)
 - `cve_agent.sources.circl.CIRCLClient` (sightings/lookup signals)
+- `cve_agent.sources.msrc.MSRCClient` (Microsoft vendor confirmation signal)
+- `cve_agent.sources.redhat.RedHatSecurityClient` (vendor package/advisory/fix-state context)
+- `cve_agent.sources.debian.DebianTrackerClient` (distro package/release fixed-version context)
+- `cve_agent.sources.regional.RegionalIntelClient` (regional/national RSS + CSAF + JVN pattern matching)
 - `cve_agent.sources.attack_feed.AttackFeedClient` (ATT&CK feed freshness metadata)
 - `cve_agent.sources.openvex.load_openvex_map` (local OpenVEX status overrides)
 
@@ -34,18 +39,25 @@ AI CVE Watcher continuously ingests newly published CVEs from NVD, identifies en
 
 7. `cve_agent.store.StateStore` deduplicates by CVE ID unless `REPROCESS_SEEN=true`.
 
-8. `cve_agent.web` serves:
+8. `cve_agent.polling.PollController` (serve mode) manages runtime polling state:
+- auto-poll enabled/disabled without restart
+- interval changes at runtime
+- manual trigger (`Poll Now`)
+- persisted freshness state in `output/poll_status.json`
+
+9. `cve_agent.web` serves:
 - static UI files in `frontend/`
-- JSON API: `/api/findings`
+- JSON APIs: `/api/findings`, `/api/poll/status`
+- mutation APIs: `POST /api/triage/<CVE-ID>`, `POST /api/poll/config`, `POST /api/poll/run`
 - report API: `/api/report/<CVE-ID>`
-- triage API: `POST /api/triage/<CVE-ID>`
 - CSV export: `/api/export.csv`
 
 ## Project structure
 
-- `cve_agent/cli.py`: command entrypoint (`once`, `daemon`, `serve`)
+- `cve_agent/cli.py`: command entrypoint (`once`, `daemon`, `serve`, `demo`)
 - `cve_agent/config.py`: env-driven settings loader
-- `cve_agent/runner.py`: orchestration loop
+- `cve_agent/runner.py`: orchestration loop and source telemetry capture
+- `cve_agent/polling.py`: runtime poll controller + persistence
 - `cve_agent/sources/*.py`: external data clients/adapters
 - `cve_agent/analyzer.py`: relevance scoring + remediation templates
 - `cve_agent/correlator.py`: MITRE ATLAS/ATT&CK rule correlation
@@ -53,11 +65,10 @@ AI CVE Watcher continuously ingests newly published CVEs from NVD, identifies en
 - `cve_agent/enrichment.py`: normalized enrichment application
 - `cve_agent/reporter.py`: JSONL + markdown writers + change tracking
 - `cve_agent/store.py`: persistent seen-set state
-- `cve_agent/web.py`: local dashboard server + triage/export endpoints
-- `frontend/`: HTML/CSS/JS dashboard
-- `output/`: generated findings/reports/state/triage
+- `cve_agent/web.py`: local dashboard server + triage/export/poll APIs
+- `frontend/`: HTML/CSS/JS dashboard (filters + polling controls + source freshness cards)
+- `output/`: generated findings/reports/state/triage/poll status
 
 ## Safety guidance
 
 Generated remediation code is guidance, not drop-in patch code for every product/version. Validate with vendor advisories and test in staging before production rollout.
-

@@ -24,6 +24,8 @@ const el = {
   hasKev: document.getElementById("has-kev"),
   hasFix: document.getElementById("has-fix"),
   hasRegional: document.getElementById("has-regional"),
+  hasVendorCorroboration: document.getElementById("has-vendor-corroboration"),
+  hasDistroContext: document.getElementById("has-distro-context"),
   inScope: document.getElementById("in-scope"),
   hasContradiction: document.getElementById("has-contradiction"),
   hasAtlas: document.getElementById("has-atlas"),
@@ -35,6 +37,8 @@ const el = {
   detailTitle: document.getElementById("detail-title"),
   detailMeta: document.getElementById("detail-meta"),
   detailContent: document.getElementById("detail-content"),
+  vendorPanel: document.getElementById("vendor-panel"),
+  vendorSummary: document.getElementById("vendor-summary"),
   triageEditState: document.getElementById("triage-edit-state"),
   triageEditNote: document.getElementById("triage-edit-note"),
   triageSave: document.getElementById("triage-save"),
@@ -84,6 +88,51 @@ function textPreview(items) {
   return items.slice(0, 2).join(", ");
 }
 
+
+function normalizedSources(f) {
+  return new Set((f.regional_sources || []).map((s) => String(s).toLowerCase()));
+}
+
+function hasMsrcSignal(f) {
+  const src = normalizedSources(f);
+  return src.has("msrc");
+}
+
+function hasRedHatSignal(f) {
+  const src = normalizedSources(f);
+  return src.has("red hat security data api");
+}
+
+function hasDebianSignal(f) {
+  const src = normalizedSources(f);
+  return src.has("debian security tracker");
+}
+
+function hasVendorCorroboration(f) {
+  return hasMsrcSignal(f) || hasRedHatSignal(f) || hasDebianSignal(f);
+}
+
+function hasDistroContext(f) {
+  return hasDebianSignal(f);
+}
+
+function vendorCorroborationSummary(f) {
+  const lines = [];
+  const sourceLines = [];
+  sourceLines.push(`MSRC: ${hasMsrcSignal(f) ? "yes" : "no"}`);
+  sourceLines.push(`Red Hat: ${hasRedHatSignal(f) ? "yes" : "no"}`);
+  sourceLines.push(`Debian: ${hasDebianSignal(f) ? "yes" : "no"}`);
+  lines.push(sourceLines.join(" | "));
+
+  const vendorSources = (f.regional_sources || []).filter((s) => {
+    const x = String(s).toLowerCase();
+    return x === "msrc" || x === "red hat security data api" || x === "debian security tracker";
+  });
+  lines.push(`Matched sources: ${vendorSources.length ? vendorSources.join(", ") : "none"}`);
+  lines.push(`Packages (preview): ${textPreview(f.packages)}`);
+  lines.push(`Fix context (preview): ${textPreview(f.fixed_versions)}`);
+  return lines.join("\n");
+}
 function sortFindings(list) {
   const mode = el.sortBy.value;
   const sorted = [...list];
@@ -156,6 +205,8 @@ function applyFilters() {
   const mustHaveKev = el.hasKev.checked;
   const mustHaveFix = el.hasFix.checked;
   const mustHaveRegional = el.hasRegional.checked;
+  const mustHaveVendorCorroboration = el.hasVendorCorroboration.checked;
+  const mustHaveDistroContext = el.hasDistroContext.checked;
   const mustBeInScope = el.inScope.checked;
   const mustHaveContradiction = el.hasContradiction.checked;
   const mustHaveAtlas = el.hasAtlas.checked;
@@ -173,6 +224,8 @@ function applyFilters() {
     const kevOk = !mustHaveKev || Boolean(f.kev_status);
     const fixOk = !mustHaveFix || Boolean(f.has_fix);
     const regionalOk = !mustHaveRegional || Number(f.regional_signal_count || 0) > 0;
+    const vendorCorroborationOk = !mustHaveVendorCorroboration || hasVendorCorroboration(f);
+    const distroContextOk = !mustHaveDistroContext || hasDistroContext(f);
     const inScopeOk = !mustBeInScope || Boolean(f.asset_in_scope);
     const contradictionOk = !mustHaveContradiction || (f.contradiction_flags || []).length > 0;
     const atlasOk = !mustHaveAtlas || (f.atlas_matches || []).length > 0;
@@ -223,6 +276,8 @@ function applyFilters() {
       kevOk &&
       fixOk &&
       regionalOk &&
+      vendorCorroborationOk &&
+      distroContextOk &&
       inScopeOk &&
       contradictionOk &&
       atlasOk &&
@@ -282,6 +337,9 @@ function renderCards() {
         <span class="badge">fix ${f.has_fix ? "yes" : "no"}</span>
         <span class="badge">scope ${f.asset_in_scope ? "yes" : "no"}</span>
         <span class="badge">regional ${Number(f.regional_signal_count || 0)}</span>
+        ${hasMsrcSignal(f) ? `<span class="badge badge-vendor">MSRC</span>` : ""}
+        ${hasRedHatSignal(f) ? `<span class="badge badge-vendor">Red Hat</span>` : ""}
+        ${hasDebianSignal(f) ? `<span class="badge badge-distro">Debian</span>` : ""}
       </div>
       <p class="tech-line">Ecosystems: ${textPreview(f.ecosystems)}</p>
       <p class="tech-line">Fixes: ${textPreview(f.fixed_versions)}</p>
@@ -357,12 +415,14 @@ async function selectFinding(f) {
     `Published: ${f.published || "N/A"} | Priority: ${fmt(f.priority_score)} | ` +
     `Evidence: ${fmt(f.evidence_score)} | Change: ${f.change_type || "new"} | ` +
     `EPSS: ${fmt(f.epss_score)} | KEV: ${f.kev_status ? "Yes" : "No"} | ` +
-    `Fix: ${f.has_fix ? "Yes" : "No"} | Scope: ${f.asset_in_scope ? "Yes" : "No"}`;
+    `Fix: ${f.has_fix ? "Yes" : "No"} | Scope: ${f.asset_in_scope ? "Yes" : "No"} | ` +
+    `Vendor corroboration: ${hasVendorCorroboration(f) ? "Yes" : "No"} | Distro context: ${hasDistroContext(f) ? "Yes" : "No"}`;
 
   el.triageEditState.value = f.triage_state || "new";
   el.triageEditNote.value = f.triage_note || "";
 
   renderMitrePanel(f);
+  el.vendorSummary.textContent = vendorCorroborationSummary(f);
   el.detailContent.textContent = "Loading report...";
 
   try {
@@ -538,6 +598,8 @@ function bindEvents() {
   el.hasKev.addEventListener("change", applyFilters);
   el.hasFix.addEventListener("change", applyFilters);
   el.hasRegional.addEventListener("change", applyFilters);
+  el.hasVendorCorroboration.addEventListener("change", applyFilters);
+  el.hasDistroContext.addEventListener("change", applyFilters);
   el.inScope.addEventListener("change", applyFilters);
   el.hasContradiction.addEventListener("change", applyFilters);
   el.hasAtlas.addEventListener("change", applyFilters);
@@ -575,6 +637,8 @@ function bindEvents() {
     el.hasKev.checked = false;
     el.hasFix.checked = false;
     el.hasRegional.checked = false;
+    el.hasVendorCorroboration.checked = false;
+    el.hasDistroContext.checked = false;
     el.inScope.checked = false;
     el.hasContradiction.checked = false;
     el.hasAtlas.checked = false;
