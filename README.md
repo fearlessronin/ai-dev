@@ -95,6 +95,12 @@ Serve polling flags:
 - `--poll`: enable background polling while the dashboard is running.
 - `--poll-interval-minutes`: override polling cadence at startup (applies to `daemon` and `serve --poll`).
 
+
+Dashboard Poll Controls (top bar):
+- Auto-poll toggle: enable/disable background polling without restart.
+- Interval slider: set polling cadence at runtime.
+- `Poll Now` button: trigger an immediate full-source refresh.
+- Source freshness cards: per-source status, last polled time, last success time, duration, records, and last error.
 ## No-API Demo Mode
 
 Seed a known-good local dataset and start the dashboard without API keys:
@@ -131,6 +137,12 @@ pre-commit run --all-files
 - `just validate`
 - `just run-demo`
 
+## Polling API
+
+- `GET /api/poll/status`: current polling state + per-source freshness telemetry
+- `POST /api/poll/config`: update runtime polling config (`enabled`, `interval_minutes`)
+- `POST /api/poll/run`: trigger an immediate manual polling cycle
+
 ## Configuration
 
 - `NVD_API_KEY`: optional NVD API key
@@ -157,6 +169,7 @@ pre-commit run --all-files
 - `output/state.json`: seen CVE IDs
 - `output/triage.json`: triage state/note overrides
 - `output/findings_latest.json`: latest snapshot for change detection
+- `output/poll_status.json`: persisted polling state and per-source freshness snapshot
 
 ## Data Contract
 

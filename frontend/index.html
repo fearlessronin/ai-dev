@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/styles.css?v=20260221d" />
+    <link rel="stylesheet" href="/assets/styles.css?v=20260222a" />
   </head>
   <body>
     <div class="bg-glow bg-glow-a"></div>
@@ -26,6 +26,21 @@
     </nav>
 
     <section id="view-radar">
+      <section class="poll-strip panel">
+        <div class="poll-controls">
+          <label class="poll-toggle"><input type="checkbox" id="poll-enabled" /> Auto-poll</label>
+          <label>
+            Interval (minutes)
+            <input id="poll-interval" type="range" min="5" max="120" step="5" value="30" />
+            <span id="poll-interval-value">30</span>
+          </label>
+          <button id="poll-save">Apply Poll Config</button>
+          <button id="poll-run-now">Poll Now</button>
+        </div>
+        <div id="poll-summary" class="poll-summary">Loading poll status...</div>
+        <div id="poll-sources" class="poll-sources"></div>
+      </section>
+
       <main class="layout">
         <aside class="panel filters">
           <h2>Filters</h2>
@@ -169,9 +184,10 @@
       </article>
     </section>
 
-    <script src="/assets/app.js?v=20260221d"></script>
+    <script src="/assets/app.js?v=20260222a"></script>
   </body>
 </html>
+
 
 
 

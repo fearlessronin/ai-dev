@@ -1,9 +1,11 @@
-﻿const state = {
+const state = {
   findings: [],
   filtered: [],
   selectedId: null,
   statFilter: "",
+  pollStatus: null,
 };
+
 
 const el = {
   cards: document.getElementById("cards"),
@@ -45,7 +47,7 @@ const el = {
   viewTabs: document.querySelectorAll(".view-tab"),
   docLinks: document.querySelectorAll(".doc-link"),
   docTitle: document.getElementById("doc-title"),
-  docBody: document.getElementById("doc-body"),
+  docBody: document.getElementById("doc-body"),`r`n  pollEnabled: document.getElementById("poll-enabled"),`r`n  pollInterval: document.getElementById("poll-interval"),`r`n  pollIntervalValue: document.getElementById("poll-interval-value"),`r`n  pollSave: document.getElementById("poll-save"),`r`n  pollRunNow: document.getElementById("poll-run-now"),`r`n  pollSummary: document.getElementById("poll-summary"),`r`n  pollSources: document.getElementById("poll-sources"),
 };
 
 function fmt(n) {
@@ -396,6 +398,114 @@ async function loadDoc(docId, title) {
   }
 }
 
+
+function formatAgo(isoString) {
+  if (!isoString) return "never";
+  const t = Date.parse(isoString);
+  if (Number.isNaN(t)) return "unknown";
+  const diffSec = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if (diffSec < 60) return `${diffSec}s ago`;
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  return `${Math.floor(diffSec / 86400)}d ago`;
+}
+
+function statusClass(status) {
+  if (status === "ok") return "poll-source__status-ok";
+  if (status === "error") return "poll-source__status-error";
+  if (status === "running") return "poll-source__status-running";
+  return "";
+}
+
+function renderPollStatus() {
+  const status = state.pollStatus;
+  if (!status) {
+    el.pollSummary.textContent = "Poll status unavailable.";
+    el.pollSources.innerHTML = "";
+    return;
+  }
+
+  el.pollEnabled.checked = Boolean(status.enabled);
+  el.pollInterval.value = String(status.interval_minutes || 30);
+  el.pollIntervalValue.textContent = String(status.interval_minutes || 30);
+
+  const active = status.is_polling ? "polling now" : status.enabled ? "auto-poll enabled" : "auto-poll disabled";
+  const nextRun = status.next_run_in_seconds == null ? "n/a" : `${status.next_run_in_seconds}s`;
+  const lastRun = status.last_cycle_completed ? formatAgo(status.last_cycle_completed) : "never";
+  const err = status.last_cycle_error ? ` | error: ${status.last_cycle_error}` : "";
+  el.pollSummary.textContent = `Status: ${active} | interval: ${status.interval_minutes}m | next run: ${nextRun} | last run: ${lastRun}${err}`;
+
+  const sources = status.sources || {};
+  const names = Object.keys(sources).sort();
+  if (!names.length) {
+    el.pollSources.innerHTML = "<div class=\"poll-source\">No source telemetry yet.</div>";
+    return;
+  }
+
+  el.pollSources.innerHTML = "";
+  for (const name of names) {
+    const s = sources[name] || {};
+    const card = document.createElement("div");
+    card.className = "poll-source";
+    card.innerHTML = `
+      <h4>${name}</h4>
+      <p class="poll-source__meta ${statusClass(s.status)}">status: ${s.status || "never"}</p>
+      <p class="poll-source__meta">last polled: ${formatAgo(s.last_polled)}</p>
+      <p class="poll-source__meta">last success: ${formatAgo(s.last_success)}</p>
+      <p class="poll-source__meta">duration: ${s.duration_ms == null ? "n/a" : `${s.duration_ms}ms`}</p>
+      <p class="poll-source__meta">records: ${Number(s.records || 0)}</p>
+      <p class="poll-source__meta">error: ${s.last_error || "none"}</p>
+    `;
+    el.pollSources.appendChild(card);
+  }
+}
+
+async function loadPollStatus() {
+  const res = await fetch("/api/poll/status", { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error("Failed to load poll status");
+  }
+  state.pollStatus = await res.json();
+  renderPollStatus();
+}
+
+async function savePollConfig() {
+  const payload = {
+    enabled: el.pollEnabled.checked,
+    interval_minutes: Number(el.pollInterval.value),
+  };
+  const res = await fetch("/api/poll/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw new Error("Failed to save poll config");
+  }
+  state.pollStatus = await res.json();
+  renderPollStatus();
+}
+
+async function runPollNow() {
+  const res = await fetch("/api/poll/run", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!res.ok) {
+    throw new Error("Failed to trigger poll");
+  }
+  state.pollStatus = await res.json();
+  renderPollStatus();
+  setTimeout(async () => {
+    try {
+      await loadPollStatus();
+      await loadFindings();
+    } catch {
+      // no-op
+    }
+  }, 3000);
+}
 function bindEvents() {
   el.search.addEventListener("input", applyFilters);
   el.category.addEventListener("change", applyFilters);
@@ -505,10 +615,24 @@ function bindEvents() {
   el.confidenceValue.textContent = fmt(el.confidence.value);
   el.epssMinValue.textContent = fmt(el.epssMin.value);
   el.evidenceMinValue.textContent = fmt(el.evidenceMin.value);
+  el.pollIntervalValue.textContent = String(el.pollInterval.value);
   switchView("radar");
   await loadFindings();
+  try {
+    await loadPollStatus();
+  } catch {
+    el.pollSummary.textContent = "Poll status unavailable.";
+  }
+  setInterval(async () => {
+    try {
+      await loadPollStatus();
+    } catch {
+      // no-op
+    }
+  }, 15000);
   await loadDoc("runbook", "How To Use");
 })();
+
 
 
 

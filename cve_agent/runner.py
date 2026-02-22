@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from .analyzer import analyze_candidate
 from .config import Settings
@@ -21,6 +24,19 @@ from .sources.openvex import load_openvex_map
 from .sources.osv import OSVClient
 from .sources.regional import RegionalIntelClient
 from .store import StateStore
+
+SOURCE_NAMES = [
+    "nvd",
+    "kev",
+    "epss",
+    "cveorg",
+    "osv",
+    "ghsa",
+    "circl",
+    "regional",
+    "openvex",
+    "attack_feed",
+]
 
 
 class CVEWatcher:
@@ -44,10 +60,12 @@ class CVEWatcher:
         self.store = StateStore(settings.state_file)
         mappings_dir = Path(__file__).resolve().parent.parent / "mappings"
         self.correlator = MitreCorrelator(mappings_dir)
+        self._source_status = {name: self._empty_source_status() for name in SOURCE_NAMES}
 
     def run_once(self) -> int:
         logging.info("Fetching CVEs from last %s days", self.settings.window_days)
-        cves = self.client.fetch_last_days(self.settings.window_days)
+
+        cves = self._call_source("nvd", lambda: self.client.fetch_last_days(self.settings.window_days))
         seen = self.store.seen_ids()
 
         candidates = []
@@ -60,15 +78,15 @@ class CVEWatcher:
             candidates.append((cve, analysis))
 
         candidate_ids = [cve.cve_id for cve, _ in candidates]
-        kev_map = self.kev_client.fetch_catalog()
-        epss_map = self.epss_client.fetch_scores(candidate_ids)
-        cveorg_map = self.cveorg_client.fetch_records(candidate_ids)
-        osv_map = self.osv_client.fetch_records(candidate_ids)
-        ghsa_map = self.ghsa_client.fetch_by_cves(candidate_ids)
-        circl_map = self.circl_client.fetch_records(candidate_ids)
-        regional_map = self.regional_client.fetch_signals(candidate_ids)
-        openvex_map = load_openvex_map(self.settings.openvex_path)
-        attack_feed_meta = self.attack_feed_client.fetch_metadata() or {}
+        kev_map = self._call_source("kev", self.kev_client.fetch_catalog)
+        epss_map = self._call_source("epss", lambda: self.epss_client.fetch_scores(candidate_ids))
+        cveorg_map = self._call_source("cveorg", lambda: self.cveorg_client.fetch_records(candidate_ids))
+        osv_map = self._call_source("osv", lambda: self.osv_client.fetch_records(candidate_ids))
+        ghsa_map = self._call_source("ghsa", lambda: self.ghsa_client.fetch_by_cves(candidate_ids))
+        circl_map = self._call_source("circl", lambda: self.circl_client.fetch_records(candidate_ids))
+        regional_map = self._call_source("regional", lambda: self.regional_client.fetch_signals(candidate_ids))
+        openvex_map = self._call_source("openvex", lambda: load_openvex_map(self.settings.openvex_path))
+        attack_feed_meta = self._call_source("attack_feed", self.attack_feed_client.fetch_metadata) or {}
 
         new_count = 0
         for cve, analysis in candidates:
@@ -135,3 +153,50 @@ class CVEWatcher:
 
             logging.info("Sleeping for %s seconds", interval_seconds)
             time.sleep(interval_seconds)
+
+    def get_poll_runtime_status(self) -> dict[str, Any]:
+        return {"sources": {name: dict(data) for name, data in self._source_status.items()}}
+
+    def _call_source(self, name: str, loader: Callable[[], Any]) -> Any:
+        started = time.perf_counter()
+        status = self._source_status.setdefault(name, self._empty_source_status())
+        status["status"] = "running"
+        status["last_polled"] = self._utc_now_iso()
+
+        try:
+            result = loader()
+        except Exception as exc:
+            status["status"] = "error"
+            status["last_error"] = str(exc)
+            status["duration_ms"] = int((time.perf_counter() - started) * 1000)
+            status["records"] = 0
+            raise
+
+        status["status"] = "ok"
+        status["last_error"] = ""
+        status["last_success"] = self._utc_now_iso()
+        status["duration_ms"] = int((time.perf_counter() - started) * 1000)
+        status["records"] = self._count_result(result)
+        return result
+
+    def _empty_source_status(self) -> dict[str, Any]:
+        return {
+            "status": "never",
+            "last_polled": None,
+            "last_success": None,
+            "last_error": "",
+            "duration_ms": None,
+            "records": 0,
+        }
+
+    def _utc_now_iso(self) -> str:
+        return datetime.now(UTC).replace(microsecond=0).isoformat()
+
+    def _count_result(self, result: Any) -> int:
+        if result is None:
+            return 0
+        if isinstance(result, dict):
+            return len(result)
+        if isinstance(result, (list, tuple, set)):
+            return len(result)
+        return 1

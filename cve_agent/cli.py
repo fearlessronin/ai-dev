@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import argparse
 import logging
-import threading
 from dataclasses import replace
 from pathlib import Path
 
 from .config import load_settings
 from .demo import seed_demo_dataset
+from .polling import PollController
 from .runner import CVEWatcher
 from .web import serve
 
@@ -57,10 +57,13 @@ def main() -> None:
         target = seed_demo_dataset(settings.output_dir)
         logging.info("Demo dataset seeded at %s", target)
     else:
-        if args.poll:
-            thread = threading.Thread(target=watcher.run_daemon, name="cve-poller", daemon=True)
-            thread.start()
-            logging.info("Background polling enabled every %s minutes", settings.poll_interval_minutes)
+        poll_controller = PollController(
+            watcher=watcher,
+            output_dir=settings.output_dir,
+            interval_minutes=settings.poll_interval_minutes,
+            enabled=bool(args.poll),
+        )
+        poll_controller.start()
 
         root_dir = Path(__file__).resolve().parent.parent
         frontend_dir = root_dir / "frontend"
@@ -71,6 +74,7 @@ def main() -> None:
             docs_dir=docs_dir,
             host=args.host,
             port=args.port,
+            poll_controller=poll_controller,
         )
 
 

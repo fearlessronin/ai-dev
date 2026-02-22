@@ -9,7 +9,11 @@ import subprocess
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import StringIO
 from pathlib import Path
+from typing import TYPE_CHECKING
 from urllib.parse import unquote
+
+if TYPE_CHECKING:
+    from .polling import PollController
 
 DOC_MAP = {
     "overview": "APP_OVERVIEW.md",
@@ -134,6 +138,7 @@ def serve(
     docs_dir: Path,
     host: str = "127.0.0.1",
     port: int = 8080,
+    poll_controller: PollController | None = None,
 ) -> None:
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
@@ -147,6 +152,8 @@ def serve(
                 return self._send_findings()
             if path == "/api/export.csv":
                 return self._send_export_csv()
+            if path == "/api/poll/status":
+                return self._send_poll_status()
             if path.startswith("/api/report/"):
                 cve_id = path.rsplit("/", 1)[-1]
                 return self._send_report(cve_id)
@@ -162,6 +169,10 @@ def serve(
             if path.startswith("/api/triage/"):
                 cve_id = path.rsplit("/", 1)[-1].strip().upper()
                 return self._update_triage(cve_id)
+            if path == "/api/poll/config":
+                return self._update_poll_config()
+            if path == "/api/poll/run":
+                return self._run_poll_now()
 
             self.send_response(404)
             self.end_headers()
@@ -212,21 +223,43 @@ def serve(
             self.end_headers()
             self.wfile.write(csv_payload)
 
+        def _send_poll_status(self) -> None:
+            if poll_controller is None:
+                return self._send_json({"error": "poll controller unavailable"}, status=503)
+            return self._send_json(poll_controller.status())
+
+        def _update_poll_config(self) -> None:
+            if poll_controller is None:
+                return self._send_json({"error": "poll controller unavailable"}, status=503)
+
+            payload = self._read_json_body()
+            if payload is None:
+                return self._send_json({"error": "invalid JSON body"}, status=400)
+
+            enabled = bool(payload.get("enabled", False))
+            interval_raw = payload.get("interval_minutes", 30)
+            try:
+                interval_minutes = max(1, int(interval_raw))
+            except (TypeError, ValueError):
+                return self._send_json({"error": "interval_minutes must be an integer"}, status=400)
+
+            status_payload = poll_controller.update_config(enabled=enabled, interval_minutes=interval_minutes)
+            return self._send_json(status_payload)
+
+        def _run_poll_now(self) -> None:
+            if poll_controller is None:
+                return self._send_json({"error": "poll controller unavailable"}, status=503)
+            status_payload = poll_controller.trigger_now()
+            return self._send_json(status_payload)
+
         def _update_triage(self, cve_id: str) -> None:
             if not cve_id:
                 self.send_response(400)
                 self.end_headers()
                 return
 
-            try:
-                length = int(self.headers.get("Content-Length", "0"))
-            except ValueError:
-                length = 0
-
-            body = self.rfile.read(max(0, length))
-            try:
-                payload = json.loads(body.decode("utf-8") or "{}")
-            except json.JSONDecodeError:
+            payload = self._read_json_body()
+            if payload is None:
                 self.send_response(400)
                 self.end_headers()
                 return
@@ -242,13 +275,21 @@ def serve(
             triage_map[cve_id] = {"state": state, "note": note}
             _write_triage(output_dir, triage_map)
 
-            result = json.dumps({"ok": True, "cve_id": cve_id, "state": state, "note": note}).encode("utf-8")
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", str(len(result)))
-            self.send_header("Cache-Control", "no-store")
-            self.end_headers()
-            self.wfile.write(result)
+            result = {"ok": True, "cve_id": cve_id, "state": state, "note": note}
+            self._send_json(result)
+
+        def _read_json_body(self) -> dict | None:
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                length = 0
+
+            body = self.rfile.read(max(0, length))
+            try:
+                payload = json.loads(body.decode("utf-8") or "{}")
+            except json.JSONDecodeError:
+                return None
+            return payload if isinstance(payload, dict) else None
 
         def _send_report(self, cve_id: str) -> None:
             target = output_dir / "reports" / f"{cve_id}.md"
@@ -287,6 +328,15 @@ def serve(
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(data)
+
+        def _send_json(self, payload: dict, status: int = 200) -> None:
+            encoded = json.dumps(payload).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(encoded)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(encoded)
 
     _warn_existing_listeners(host, port)
 

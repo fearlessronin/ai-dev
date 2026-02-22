@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   --bg: #f4efe6;
   --ink: #1e2a2f;
   --ink-soft: #4f6468;
@@ -338,4 +338,91 @@ button {
   background: #f2e2cc;
   border: 1px solid #d5c0a3;
   cursor: pointer;
+}
+.poll-strip {
+  margin: 1rem 2rem 0;
+}
+
+.poll-controls {
+  display: grid;
+  grid-template-columns: 180px 1fr 170px 120px;
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.poll-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.poll-toggle input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+#poll-run-now {
+  background: var(--amber);
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+#poll-save {
+  background: var(--teal);
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+.poll-summary {
+  margin-top: 0.75rem;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.poll-sources {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem;
+}
+
+.poll-source {
+  border: 1px solid #d8cab6;
+  border-radius: 10px;
+  background: #fffdf7;
+  padding: 0.55rem;
+  font-size: 0.8rem;
+}
+
+.poll-source h4 {
+  margin: 0 0 0.3rem;
+  font-size: 0.86rem;
+}
+
+.poll-source__meta {
+  margin: 0.12rem 0;
+  color: #5a6d71;
+  font-family: "IBM Plex Mono", monospace;
+}
+
+.poll-source__status-ok {
+  color: #177a4f;
+}
+
+.poll-source__status-error {
+  color: #b33f2c;
+}
+
+.poll-source__status-running {
+  color: #9a661e;
+}
+
+@media (max-width: 1100px) {
+  .poll-controls {
+    grid-template-columns: 1fr;
+  }
 }
