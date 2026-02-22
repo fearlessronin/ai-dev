@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from .models import AnalysisResult
 
@@ -85,9 +85,8 @@ def apply_phase3_correlation(
 
     if analysis.regional_signal_count > 0:
         score += min(0.12, analysis.regional_signal_count * 0.03)
-        evidence.append(
-            f"Regional/national feeds matched ({analysis.regional_signal_count}): {', '.join(analysis.regional_sources[:3])}"
-        )
+        sources_preview = ", ".join(analysis.regional_sources[:3])
+        evidence.append(f"Regional/national feeds matched ({analysis.regional_signal_count}): {sources_preview}")
 
     in_scope, scope_reason = _asset_scope(
         ecosystems=analysis.ecosystems,

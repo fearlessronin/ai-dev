@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import csv
 import json
@@ -142,7 +142,7 @@ def serve(
             if path in {"/", "/index.html"}:
                 return self._send_file(frontend_dir / "index.html")
             if path.startswith("/assets/"):
-                rel = path[len("/assets/"):]
+                rel = path[len("/assets/") :]
                 return self._send_file(frontend_dir / rel)
             if path == "/api/findings":
                 return self._send_findings()
@@ -295,14 +295,8 @@ def serve(
         server = ThreadingHTTPServer((host, port), Handler)
     except OSError as exc:
         raise RuntimeError(
-            f"Unable to bind dashboard server to {host}:{port}. "
-            f"Another process may already be listening on that port."
+            f"Unable to bind dashboard server to {host}:{port}. Another process may already be listening on that port."
         ) from exc
 
     print(f"Dashboard running at http://{host}:{port}")
     server.serve_forever()
-
-
-
-
-

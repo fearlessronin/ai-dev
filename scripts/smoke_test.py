@@ -1,6 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import tempfile
@@ -18,6 +19,12 @@ def main() -> int:
     root = Path(__file__).resolve().parent.parent
     temp_output = Path(tempfile.mkdtemp(prefix="cve-watch-smoke-"))
 
+    env = dict(os.environ)
+    env["OUTPUT_DIR"] = str(temp_output)
+    env["STATE_FILE"] = str(temp_output / "state.json")
+
+    subprocess.run(["python", "-m", "cve_agent.cli", "demo"], cwd=str(root), env=env, check=True)
+
     cmd = [
         "python",
         "-m",
@@ -28,10 +35,6 @@ def main() -> int:
         "--port",
         "8099",
     ]
-
-    env = dict(**__import__("os").environ)
-    env["OUTPUT_DIR"] = str(temp_output)
-    env["STATE_FILE"] = str(temp_output / "state.json")
 
     proc = subprocess.Popen(cmd, cwd=str(root), env=env)
 
@@ -54,6 +57,8 @@ def main() -> int:
             payload = json.loads(resp.read().decode("utf-8"))
             if not isinstance(payload, list):
                 raise RuntimeError("/api/findings payload is not a list")
+            if len(payload) < 1:
+                raise RuntimeError("/api/findings returned no records after demo seeding")
 
         print("Smoke test passed")
         return 0

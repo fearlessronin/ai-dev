@@ -1,9 +1,10 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from pathlib import Path
 from typing import Any
 
+from .contract import REQUIRED_FINDING_FIELDS, SCHEMA_VERSION
 from .models import AnalysisResult, MitreMatch
 
 
@@ -63,6 +64,7 @@ class Reporter:
 
     def _write_jsonl(self, finding: AnalysisResult) -> None:
         payload = {
+            "schema_version": SCHEMA_VERSION,
             "cve_id": finding.cve.cve_id,
             "published": finding.cve.published,
             "last_modified": finding.cve.last_modified,
@@ -114,6 +116,10 @@ class Reporter:
             "priority_score": finding.priority_score,
             "priority_reason": finding.priority_reason,
         }
+        missing = [key for key in REQUIRED_FINDING_FIELDS if key not in payload]
+        if missing:
+            raise ValueError(f"findings contract violation: missing required fields {missing}")
+
         with self.jsonl_path.open("a", encoding="utf-8") as f:
             f.write(json.dumps(payload, ensure_ascii=False) + "\n")
 
@@ -128,9 +134,7 @@ class Reporter:
         attack_lines = self._format_match_lines(finding.attack_matches)
         evidence_lines = "\n".join(f"- {x}" for x in finding.evidence_links) if finding.evidence_links else "- None"
         contradiction_lines = (
-            "\n".join(f"- {x}" for x in finding.contradiction_flags)
-            if finding.contradiction_flags
-            else "- None"
+            "\n".join(f"- {x}" for x in finding.contradiction_flags) if finding.contradiction_flags else "- None"
         )
 
         content = f"""# {cve.cve_id}
@@ -142,47 +146,47 @@ class Reporter:
 - Published: {cve.published}
 - Last modified: {cve.last_modified}
 - Confidence (agentic AI relevance): {finding.confidence:.2f}
-- Matched keywords: {', '.join(finding.matched_keywords)}
-- Categories: {', '.join(finding.categories)}
+- Matched keywords: {", ".join(finding.matched_keywords)}
+- Categories: {", ".join(finding.categories)}
 - CWE: {cwes}
 - CPEs: {cpes}
-- CVSS v3.1 Base Score: {cve.cvss_v31_base if cve.cvss_v31_base is not None else 'N/A'}
-- CVSS v3.1 Vector: {cve.cvss_v31_vector or 'N/A'}
+- CVSS v3.1 Base Score: {cve.cvss_v31_base if cve.cvss_v31_base is not None else "N/A"}
+- CVSS v3.1 Vector: {cve.cvss_v31_vector or "N/A"}
 
 ## Operational Risk Signals
 - Priority score: {finding.priority_score:.2f}
-- Priority rationale: {finding.priority_reason or 'N/A'}
+- Priority rationale: {finding.priority_reason or "N/A"}
 - Change type: {finding.change_type}
 - Change reason: {finding.change_reason}
-- KEV listed: {'Yes' if finding.kev_status else 'No'}
-- KEV date added: {finding.kev_date_added or 'N/A'}
-- KEV due date: {finding.kev_due_date or 'N/A'}
-- EPSS score: {finding.epss_score if finding.epss_score is not None else 'N/A'}
-- EPSS percentile: {finding.epss_percentile if finding.epss_percentile is not None else 'N/A'}
-- SSVC decision: {finding.ssvc_decision or 'N/A'}
-- SSVC role: {finding.ssvc_role or 'N/A'}
-- GHSA IDs: {', '.join(finding.ghsa_ids) if finding.ghsa_ids else 'N/A'}
-- GHSA severity: {finding.ghsa_severity or 'N/A'}
-- CIRCL sightings: {finding.circl_sightings if finding.circl_sightings is not None else 'N/A'}
-- OpenVEX status: {finding.openvex_status or 'N/A'}
-- ATT&CK feed version: {finding.attack_feed_version or 'N/A'}
-- Regional/National sources: {', '.join(finding.regional_sources) if finding.regional_sources else 'N/A'}
+- KEV listed: {"Yes" if finding.kev_status else "No"}
+- KEV date added: {finding.kev_date_added or "N/A"}
+- KEV due date: {finding.kev_due_date or "N/A"}
+- EPSS score: {finding.epss_score if finding.epss_score is not None else "N/A"}
+- EPSS percentile: {finding.epss_percentile if finding.epss_percentile is not None else "N/A"}
+- SSVC decision: {finding.ssvc_decision or "N/A"}
+- SSVC role: {finding.ssvc_role or "N/A"}
+- GHSA IDs: {", ".join(finding.ghsa_ids) if finding.ghsa_ids else "N/A"}
+- GHSA severity: {finding.ghsa_severity or "N/A"}
+- CIRCL sightings: {finding.circl_sightings if finding.circl_sightings is not None else "N/A"}
+- OpenVEX status: {finding.openvex_status or "N/A"}
+- ATT&CK feed version: {finding.attack_feed_version or "N/A"}
+- Regional/National sources: {", ".join(finding.regional_sources) if finding.regional_sources else "N/A"}
 - Regional signal count: {finding.regional_signal_count}
 
 ## Ecosystem and Fix Context
-- CNA org ID: {finding.cna_org_id or 'N/A'}
-- Affected products: {', '.join(finding.affected_products) if finding.affected_products else 'N/A'}
-- Ecosystems: {', '.join(finding.ecosystems) if finding.ecosystems else 'N/A'}
-- Packages: {', '.join(finding.packages) if finding.packages else 'N/A'}
-- Matching CPEs: {', '.join(finding.cpe_uris) if finding.cpe_uris else 'N/A'}
-- Has fix version: {'Yes' if finding.has_fix else 'No'}
-- Fixed versions: {', '.join(finding.fixed_versions) if finding.fixed_versions else 'N/A'}
+- CNA org ID: {finding.cna_org_id or "N/A"}
+- Affected products: {", ".join(finding.affected_products) if finding.affected_products else "N/A"}
+- Ecosystems: {", ".join(finding.ecosystems) if finding.ecosystems else "N/A"}
+- Packages: {", ".join(finding.packages) if finding.packages else "N/A"}
+- Matching CPEs: {", ".join(finding.cpe_uris) if finding.cpe_uris else "N/A"}
+- Has fix version: {"Yes" if finding.has_fix else "No"}
+- Fixed versions: {", ".join(finding.fixed_versions) if finding.fixed_versions else "N/A"}
 
 ## Phase 3 Evidence Correlation
 - Evidence score: {finding.evidence_score:.2f}
-- Evidence rationale: {finding.evidence_reason or 'N/A'}
-- In target asset scope: {'Yes' if finding.asset_in_scope else 'No'}
-- Asset scope reason: {finding.asset_scope_reason or 'N/A'}
+- Evidence rationale: {finding.evidence_reason or "N/A"}
+- In target asset scope: {"Yes" if finding.asset_in_scope else "No"}
+- Asset scope reason: {finding.asset_scope_reason or "N/A"}
 
 ### Evidence Links
 {evidence_lines}
@@ -192,7 +196,7 @@ class Reporter:
 
 ## Triage
 - State: {finding.triage_state}
-- Note: {finding.triage_note or 'N/A'}
+- Note: {finding.triage_note or "N/A"}
 
 ## MITRE Correlation
 - Summary: {finding.correlation_summary}
@@ -204,19 +208,19 @@ class Reporter:
 {attack_lines}
 
 ## Description
-{cve.description or 'No description provided by source.'}
+{cve.description or "No description provided by source."}
 
 ## Recommended Remediation
 {finding.remediation}
 
 ## Code Guidance (Python)
 ```python
-{finding.code_examples.get('python', '# no example')}
+{finding.code_examples.get("python", "# no example")}
 ```
 
 ## Code Guidance (JavaScript)
 ```javascript
-{finding.code_examples.get('javascript', '// no example')}
+{finding.code_examples.get("javascript", "// no example")}
 ```
 
 ## References
@@ -245,9 +249,11 @@ class Reporter:
         lines = []
         for m in matches:
             reasons = "; ".join(m.reasons) if m.reasons else "No reason provided"
-            lines.append(
-                f"- {m.technique_id} ({m.technique_name}) | tactic={m.tactic} | confidence={m.confidence} | reason={reasons}"
+            line = (
+                f"- {m.technique_id} ({m.technique_name}) | tactic={m.tactic} "
+                f"| confidence={m.confidence} | reason={reasons}"
             )
+            lines.append(line)
         return "\n".join(lines)
 
 

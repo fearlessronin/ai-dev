@@ -1,4 +1,4 @@
-﻿# AI CVE Watcher
+# AI CVE Watcher
 
 Continuously ingests CVEs from a configurable lookback window, enriches them with multi-source threat context, and produces analyst-ready prioritization for securing AI environments.
 
@@ -46,10 +46,17 @@ Continuously ingests CVEs from a configurable lookback window, enriches them wit
 
 ## Quick Start
 
-1. Install dependencies:
+1. Install dependencies (runtime + dev):
 
 ```bash
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
+```
+
+Or install via editable package metadata:
+
+```bash
+pip install -e .[dev]
 ```
 
 2. Create env file:
@@ -78,6 +85,42 @@ python -m cve_agent.cli serve --host 127.0.0.1 --port 8080
 
 Open `http://127.0.0.1:8080`.
 
+## No-API Demo Mode
+
+Seed a known-good local dataset and start the dashboard without API keys:
+
+```bash
+python -m cve_agent.cli demo
+python -m cve_agent.cli serve --host 127.0.0.1 --port 8080
+```
+
+Demo data source:
+- `demo/findings.demo.jsonl`
+
+## Pre-commit
+
+Install hooks:
+
+```bash
+pre-commit install
+```
+
+Run hooks manually:
+
+```bash
+pre-commit run --all-files
+```
+
+## Dev Workflow
+
+- `just install`
+- `just lint`
+- `just format-check`
+- `just test`
+- `just smoke`
+- `just validate`
+- `just run-demo`
+
 ## Configuration
 
 - `NVD_API_KEY`: optional NVD API key
@@ -105,12 +148,18 @@ Open `http://127.0.0.1:8080`.
 - `output/triage.json`: triage state/note overrides
 - `output/findings_latest.json`: latest snapshot for change detection
 
+## Data Contract
+
+- `docs/DATA_CONTRACT.md`
+- `schemas/findings.schema.json`
+
 ## Docs
 
 - `docs/RUNBOOK.md`
 - `docs/APP_OVERVIEW.md`
 - `docs/ANALYST_GUIDE.md`
 - `docs/OPTIMIZATION_GUIDE.md`
+- `docs/DATA_CONTRACT.md`
 
 ## Maintenance Rule
 

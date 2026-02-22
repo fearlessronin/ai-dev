@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ai-cve-watcher.local/schemas/findings.schema.json",
+  "title": "AI CVE Watcher Finding",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "cve_id",
+    "published",
+    "confidence",
+    "summary",
+    "priority_score",
+    "priority_reason",
+    "evidence_score",
+    "change_type",
+    "triage_state"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "cve_id": { "type": "string", "minLength": 1 },
+    "published": { "type": "string" },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "summary": { "type": "string" },
+    "priority_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "priority_reason": { "type": "string" },
+    "evidence_score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "change_type": { "type": "string" },
+    "triage_state": { "type": "string" }
+  },
+  "additionalProperties": true
+}

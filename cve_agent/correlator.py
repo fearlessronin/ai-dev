@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 from pathlib import Path
@@ -102,4 +102,3 @@ class MitreCorrelator:
 
         matches.sort(key=lambda m: m.score, reverse=True)
         return matches
-

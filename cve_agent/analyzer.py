@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import re
 from dataclasses import dataclass
@@ -166,8 +166,8 @@ export function safeSendEmail(rawArgs, user) {
 
     return RemediationPack(
         text=(
-            "Apply vendor patches, reduce agent privileges, isolate execution environments, and monitor all model-driven "
-            "actions with audit logs and anomaly alerts."
+            "Apply vendor patches, reduce agent privileges, isolate execution environments, "
+            "monitor all model-driven actions with audit logs and anomaly alerts."
         ),
         snippets={
             "python": """# Principle of least privilege for agent credentials

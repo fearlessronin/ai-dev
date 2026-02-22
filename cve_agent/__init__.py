@@ -1,3 +1,3 @@
-﻿from .runner import CVEWatcher
+from .runner import CVEWatcher
 
 __all__ = ["CVEWatcher"]

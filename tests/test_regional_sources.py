@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import unittest
 from unittest.mock import Mock, patch
@@ -17,7 +17,7 @@ class RegionalClientTests(unittest.TestCase):
 
         mock_get.side_effect = [
             _resp("CVE-2026-1001"),  # JVN for first CVE
-            _resp("no hit"),         # JVN for second CVE
+            _resp("no hit"),  # JVN for second CVE
             _resp("<item>CVE-2026-1001</item><item>CVE-2026-2002</item>"),  # RSS
             _resp('{"note":"CVE-2026-2002"}'),  # CSAF text body
         ]

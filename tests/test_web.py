@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import io
 import unittest
@@ -24,10 +24,14 @@ class WebStartupChecksTest(unittest.TestCase):
 
     def test_warn_existing_listeners_prints_warning(self) -> None:
         out = io.StringIO()
-        with patch("os.getpid", return_value=1000), patch(
-            "cve_agent.web._find_listeners_for_port",
-            return_value=[("0.0.0.0:8080", 2000), ("127.0.0.1:8080", 1000)],
-        ), patch("sys.stdout", out):
+        with (
+            patch("os.getpid", return_value=1000),
+            patch(
+                "cve_agent.web._find_listeners_for_port",
+                return_value=[("0.0.0.0:8080", 2000), ("127.0.0.1:8080", 1000)],
+            ),
+            patch("sys.stdout", out),
+        ):
             web._warn_existing_listeners("127.0.0.1", 8080)
 
         rendered = out.getvalue()
