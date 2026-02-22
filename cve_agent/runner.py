@@ -76,6 +76,7 @@ class CVEWatcher:
         mappings_dir = Path(__file__).resolve().parent.parent / "mappings"
         self.correlator = MitreCorrelator(mappings_dir)
         self._source_status = {name: self._empty_source_status() for name in SOURCE_NAMES}
+        self._last_candidate_ids: list[str] = []
 
     def run_once(self) -> int:
         logging.info("Fetching CVEs from last %s days", self.settings.window_days)
@@ -93,6 +94,7 @@ class CVEWatcher:
             candidates.append((cve, analysis))
 
         candidate_ids = [cve.cve_id for cve, _ in candidates]
+        self._last_candidate_ids = list(candidate_ids)
         kev_map = self._call_source("kev", self.kev_client.fetch_catalog)
         epss_map = self._call_source("epss", lambda: self.epss_client.fetch_scores(candidate_ids))
         cveorg_map = self._call_source("cveorg", lambda: self.cveorg_client.fetch_records(candidate_ids))
@@ -197,6 +199,40 @@ class CVEWatcher:
 
         logging.info("Run complete. New findings: %s", new_count)
         return new_count
+
+    def supported_poll_sources(self) -> list[str]:
+        return list(SOURCE_NAMES)
+
+    def poll_source(self, name: str) -> int:
+        source = str(name or "").strip().lower()
+        if source not in SOURCE_NAMES:
+            raise ValueError(f"Unsupported source: {name}")
+
+        candidate_sources = {"epss", "cveorg", "osv", "ghsa", "circl", "regional", "msrc", "redhat", "debian", "cisa_ics", "certfr", "bsi"}
+        candidate_ids = list(self._last_candidate_ids)
+        if source in candidate_sources and not candidate_ids:
+            raise ValueError("No cached candidate IDs available. Run a full poll first.")
+
+        loaders: dict[str, Callable[[], Any]] = {
+            "nvd": lambda: self.client.fetch_last_days(self.settings.window_days),
+            "kev": self.kev_client.fetch_catalog,
+            "epss": lambda: self.epss_client.fetch_scores(candidate_ids),
+            "cveorg": lambda: self.cveorg_client.fetch_records(candidate_ids),
+            "osv": lambda: self.osv_client.fetch_records(candidate_ids),
+            "ghsa": lambda: self.ghsa_client.fetch_by_cves(candidate_ids),
+            "circl": lambda: self.circl_client.fetch_records(candidate_ids),
+            "regional": lambda: self.regional_client.fetch_signals(candidate_ids),
+            "msrc": lambda: self.msrc_client.fetch_records(candidate_ids),
+            "redhat": lambda: self.redhat_client.fetch_records(candidate_ids),
+            "debian": lambda: self.debian_client.fetch_records(candidate_ids),
+            "cisa_ics": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "cisa_ics"),
+            "certfr": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "certfr"),
+            "bsi": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "bsi"),
+            "openvex": lambda: load_openvex_map(self.settings.openvex_path),
+            "attack_feed": self.attack_feed_client.fetch_metadata,
+        }
+        result = self._call_source(source, loaders[source])
+        return self._count_result(result)
 
     def run_daemon(self) -> None:
         interval_seconds = self.settings.poll_interval_minutes * 60

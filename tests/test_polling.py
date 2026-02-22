@@ -10,6 +10,7 @@ from cve_agent.polling import PollController
 class _FakeWatcher:
     def __init__(self) -> None:
         self.calls = 0
+        self.source_calls: list[str] = []
         self._runtime = {
             "sources": {
                 "nvd": {"status": "ok", "records": 3},
@@ -20,6 +21,13 @@ class _FakeWatcher:
     def run_once(self) -> int:
         self.calls += 1
         return 2
+
+    def poll_source(self, name: str) -> int:
+        self.source_calls.append(name)
+        return 5
+
+    def supported_poll_sources(self) -> list[str]:
+        return ["nvd", "osv"]
 
     def get_poll_runtime_status(self) -> dict:
         return self._runtime
@@ -52,6 +60,27 @@ class PollControllerTests(unittest.TestCase):
             self.assertIn("osv", latest["failed_sources"])
             self.assertIn("source_counts", latest)
 
+    def test_trigger_source_queues_and_reports_source(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            watcher = _FakeWatcher()
+            ctl = PollController(watcher, Path(td), interval_minutes=30, enabled=False)
+            status = ctl.trigger_source("osv")
+            self.assertEqual(status["trigger_result"], "queued")
+            self.assertEqual(status["requested_source"], "osv")
+            self.assertIn("osv", status.get("queued_sources", []))
+            ctl._run_source_cycle("osv")
+            final = ctl.status()
+            self.assertIn("osv", watcher.source_calls)
+            latest = final["history"][0]
+            self.assertEqual(latest["poll_kind"], "source")
+            self.assertEqual(latest["source"], "osv")
+            self.assertEqual(latest["records_polled"], 5)
+
+    def test_trigger_source_returns_invalid_source(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            ctl = PollController(_FakeWatcher(), Path(td), interval_minutes=30, enabled=False)
+            status = ctl.trigger_source("invalid")
+            self.assertEqual(status["trigger_result"], "invalid_source")
 
 if __name__ == "__main__":
     unittest.main()

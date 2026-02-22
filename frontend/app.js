@@ -31,6 +31,7 @@ const el = {
   hasAtlas: document.getElementById("has-atlas"),
   hasAttack: document.getElementById("has-attack"),
   highMitre: document.getElementById("high-mitre"),
+  highCorroboration: document.getElementById("high-corroboration"),
   resetFilters: document.getElementById("reset-filters"),
   refresh: document.getElementById("refresh"),
   exportCsv: document.getElementById("export-csv"),
@@ -62,6 +63,8 @@ const el = {
   pollSummary: document.getElementById("poll-summary"),
   pollSources: document.getElementById("poll-sources"),
   pollHistory: document.getElementById("poll-history"),
+  pollHistoryErrorsOnly: document.getElementById("poll-history-errors-only"),
+  pollHistorySource: document.getElementById("poll-history-source"),
 };
 
 function fmt(n) {
@@ -189,6 +192,10 @@ function sortFindings(list) {
     sorted.sort((a, b) => Number(b.confidence || 0) - Number(a.confidence || 0));
   } else if (mode === "epss") {
     sorted.sort((a, b) => Number(b.epss_score || 0) - Number(a.epss_score || 0));
+  } else if (mode === "corroboration") {
+    sorted.sort((a, b) => Number(b.source_corroboration_score || 0) - Number(a.source_corroboration_score || 0));
+  } else if (mode === "asset_mapping") {
+    sorted.sort((a, b) => Number(b.asset_mapping_score || 0) - Number(a.asset_mapping_score || 0));
   } else {
     sorted.sort((a, b) => Number(b.priority_score || 0) - Number(a.priority_score || 0));
   }
@@ -259,6 +266,7 @@ function applyFilters() {
   const mustHaveAtlas = el.hasAtlas.checked;
   const mustHaveAttack = el.hasAttack.checked;
   const mustBeHighMitre = el.highMitre.checked;
+  const mustBeHighCorroboration = el.highCorroboration.checked;
   const statFilter = state.statFilter;
 
   const filtered = state.findings.filter((f) => {
@@ -278,6 +286,7 @@ function applyFilters() {
     const atlasOk = !mustHaveAtlas || (f.atlas_matches || []).length > 0;
     const attackOk = !mustHaveAttack || (f.attack_matches || []).length > 0;
     const highMitreOk = !mustBeHighMitre || hasHighMitre(f);
+    const highCorroborationOk = !mustBeHighCorroboration || Number(f.source_corroboration_score || 0) >= 0.8;
     const statOk =
       !statFilter ||
       (statFilter === "high" && Number(f.confidence || 0) >= 0.75) ||
@@ -330,6 +339,7 @@ function applyFilters() {
       atlasOk &&
       attackOk &&
       highMitreOk &&
+      highCorroborationOk &&
       statOk &&
       queryOk
     );
@@ -560,22 +570,52 @@ function statusClass(status) {
 }
 
 
+function populatePollHistorySourceFilter(status) {
+  if (!el.pollHistorySource) return;
+  const current = el.pollHistorySource.value;
+  const names = new Set([""]);
+  Object.keys((status && status.sources) || {}).forEach((n) => names.add(String(n)));
+  ((status && status.history) || []).forEach((h) => {
+    if (h && h.source) names.add(String(h.source));
+    (h.failed_sources || []).forEach((s) => names.add(String(s)));
+  });
+  el.pollHistorySource.innerHTML = "";
+  Array.from(names)
+    .sort((a, b) => a.localeCompare(b))
+    .forEach((name) => {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.textContent = name || "All";
+      el.pollHistorySource.appendChild(opt);
+    });
+  el.pollHistorySource.value = Array.from(names).includes(current) ? current : "";
+}
+
 function renderPollHistory(status) {
   if (!el.pollHistory) return;
   const history = (status && status.history) || [];
-  if (!history.length) {
+  const errorsOnly = Boolean(el.pollHistoryErrorsOnly && el.pollHistoryErrorsOnly.checked);
+  const sourceFilter = (el.pollHistorySource && el.pollHistorySource.value) || "";
+  const filteredHistory = history.filter((h) => {
+    if (errorsOnly && h.status !== "error") return false;
+    if (!sourceFilter) return true;
+    return h.source === sourceFilter || (h.failed_sources || []).includes(sourceFilter) || sourceFilter === "all";
+  });
+  if (!filteredHistory.length) {
     el.pollHistory.innerHTML = '<div class="poll-history__item">No poll runs recorded yet.</div>';
     return;
   }
   el.pollHistory.innerHTML = "";
-  history.slice(0, 8).forEach((h) => {
+  filteredHistory.slice(0, 8).forEach((h) => {
     const item = document.createElement("div");
     item.className = `poll-history__item ${h.status === "error" ? "error" : ""}`.trim();
     const completed = h.completed ? formatAgo(h.completed) : "n/a";
     const dur = h.duration_ms == null ? "n/a" : `${h.duration_ms}ms`;
     const failed = (h.failed_sources || []).length ? ` | failed: ${(h.failed_sources || []).join(",")}` : "";
     const err = h.error ? ` | err: ${String(h.error).slice(0, 90)}` : "";
-    item.textContent = `${h.status || "unknown"} | ${completed} | new=${Number(h.new_findings || 0)} | dur=${dur}${failed}${err}`;
+    const kind = h.poll_kind === "source" ? `source:${h.source || "unknown"}` : "full";
+    const recs = h.records_polled == null ? "" : ` | records=${Number(h.records_polled || 0)}`;
+    item.textContent = `${kind} | ${h.status || "unknown"} | ${completed} | new=${Number(h.new_findings || 0)} | dur=${dur}${recs}${failed}${err}`;
     el.pollHistory.appendChild(item);
   });
 }
@@ -601,6 +641,8 @@ function renderPollStatus() {
 
   renderPollHistory(status);
 
+  populatePollHistorySourceFilter(status);
+
   const sources = status.sources || {};
   const names = Object.keys(sources).sort();
   if (!names.length) {
@@ -621,6 +663,9 @@ function renderPollStatus() {
       <p class="poll-source__meta">duration: ${s.duration_ms == null ? "n/a" : `${s.duration_ms}ms`}</p>
       <p class="poll-source__meta">records: ${Number(s.records || 0)}</p>
       <p class="poll-source__meta">error: ${s.last_error || "none"}</p>
+      <div class="poll-source__actions">
+        <button type="button" class="poll-source-run" data-source="${name}">Poll Source</button>
+      </div>
     `;
     el.pollSources.appendChild(card);
   }
@@ -650,6 +695,29 @@ async function savePollConfig() {
   }
   state.pollStatus = await res.json();
   renderPollStatus();
+}
+
+async function runPollSource(source) {
+  const res = await fetch("/api/poll/run-source", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ source }),
+  });
+  if (!res.ok) {
+    throw new Error("Failed to trigger source poll");
+  }
+  state.pollStatus = await res.json();
+  renderPollStatus();
+  if (state.pollStatus && state.pollStatus.message) {
+    el.pollSummary.textContent += ` | ${state.pollStatus.message}`;
+  }
+  setTimeout(async () => {
+    try {
+      await loadPollStatus();
+    } catch {
+      // no-op
+    }
+  }, 2000);
 }
 
 async function runPollNow() {
@@ -707,6 +775,7 @@ function bindEvents() {
   el.hasAtlas.addEventListener("change", applyFilters);
   el.hasAttack.addEventListener("change", applyFilters);
   el.highMitre.addEventListener("change", applyFilters);
+  el.highCorroboration.addEventListener("change", applyFilters);
 
   el.refresh.addEventListener("click", async () => {
     await loadFindings();
@@ -721,6 +790,26 @@ function bindEvents() {
       await saveTriage();
     } catch {
       alert("Failed to save triage state.");
+    }
+  });
+
+  if (el.pollHistoryErrorsOnly) {
+    el.pollHistoryErrorsOnly.addEventListener("change", () => renderPollHistory(state.pollStatus));
+  }
+  if (el.pollHistorySource) {
+    el.pollHistorySource.addEventListener("change", () => renderPollHistory(state.pollStatus));
+  }
+  el.pollSources.addEventListener("click", async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const btn = target.closest(".poll-source-run");
+    if (!(btn instanceof HTMLElement)) return;
+    const source = btn.dataset.source;
+    if (!source) return;
+    try {
+      await runPollSource(source);
+    } catch {
+      alert("Failed to trigger source poll.");
     }
   });
 
@@ -746,6 +835,7 @@ function bindEvents() {
     el.hasAtlas.checked = false;
     el.hasAttack.checked = false;
     el.highMitre.checked = false;
+    el.highCorroboration.checked = false;
     state.statFilter = "";
     renderStats();
     applyFilters();

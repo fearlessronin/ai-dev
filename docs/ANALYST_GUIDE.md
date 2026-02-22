@@ -77,3 +77,10 @@ Recommended workflow add-on:
 1. Prioritize findings with `high` corroboration and `asset mapping` hits.
 2. Escalate faster when `transatlantic-escalation` or multiple national badges appear.
 3. Use the patch matrix to choose vendor patch validation order.
+
+
+## Additional Polling Controls
+
+- Use `Poll Source` from the source freshness cards to refresh one feed without waiting for a full polling cycle.
+- Use `Recent Poll Runs` filters (`Errors only`, `Source`) to isolate source-specific failures quickly.
+- Use the `High corroboration only` filter or sort by `Corroboration` / `Asset Mapping` for focused triage.

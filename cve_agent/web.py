@@ -173,6 +173,8 @@ def serve(
                 return self._update_poll_config()
             if path == "/api/poll/run":
                 return self._run_poll_now()
+            if path == "/api/poll/run-source":
+                return self._run_poll_source()
 
             self.send_response(404)
             self.end_headers()
@@ -250,6 +252,20 @@ def serve(
             if poll_controller is None:
                 return self._send_json({"error": "poll controller unavailable"}, status=503)
             status_payload = poll_controller.trigger_now()
+            return self._send_json(status_payload)
+
+        def _run_poll_source(self) -> None:
+            if poll_controller is None:
+                return self._send_json({"error": "poll controller unavailable"}, status=503)
+            payload = self._read_json_body()
+            if payload is None:
+                return self._send_json({"error": "invalid JSON body"}, status=400)
+            source = str(payload.get("source", "")).strip().lower()
+            if not source:
+                return self._send_json({"error": "source is required"}, status=400)
+            status_payload = poll_controller.trigger_source(source)
+            if status_payload.get("trigger_result") == "invalid_source":
+                return self._send_json(status_payload, status=400)
             return self._send_json(status_payload)
 
         def _update_triage(self, cve_id: str) -> None:

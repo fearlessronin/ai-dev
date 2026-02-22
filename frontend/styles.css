@@ -498,3 +498,27 @@ button {
 .poll-history__item.error {
   border-color: rgba(255, 107, 107, 0.25);
 }
+
+
+.poll-source__actions {
+  margin-top: 0.35rem;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.poll-source__actions button {
+  font-size: 0.72rem;
+  padding: 0.25rem 0.45rem;
+}
+
+.poll-history-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.45rem;
+  font-size: 0.8rem;
+}
+
+.poll-history-controls select {
+  margin-left: 0.25rem;
+}

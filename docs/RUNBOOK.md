@@ -59,7 +59,7 @@ Use the top-bar polling controls in the dashboard to:
 - change interval with the slider
 - manually trigger a full-source refresh (`Poll Now`) with clear `already running` feedback if a cycle is active
 - inspect per-source freshness and errors
-- review the recent poll-run audit trail (durations, failures, new findings)
+- review the recent poll-run audit trail (durations, failures, new findings) with `Errors only` / `Source` filters
 
 ## Configuration Reference
 
@@ -96,6 +96,7 @@ The app currently enriches with:
 - `GET /api/poll/status`
 - `POST /api/poll/config`
 - `POST /api/poll/run`
+- `POST /api/poll/run-source`
 
 ## Output Files
 

@@ -112,7 +112,9 @@ Dashboard Poll Controls (top bar):
 - Interval slider: set polling cadence at runtime.
 - `Poll Now` button: trigger an immediate full-source refresh (returns a clear `already running` response if a poll is in progress).
 - Source freshness cards: per-source status, last polled time, last success time, duration, records, and last error.
+- `Poll Source` buttons: manually refresh a single source when a source is stale/erroring without forcing a full poll.
 - Recent Poll Runs: rolling audit trail of recent poll cycles (status, duration, new findings, failed sources, error summary).
+- Poll history filters: `Errors only` and `Source` filters for fast troubleshooting.
 
 ## Corroboration, Patch Matrix, and Asset Mapping
 
@@ -178,6 +180,7 @@ pre-commit run --all-files
 - `GET /api/poll/status`: current polling state + per-source freshness telemetry
 - `POST /api/poll/config`: update runtime polling config (`enabled`, `interval_minutes`)
 - `POST /api/poll/run`: trigger an immediate manual polling cycle
+- `POST /api/poll/run-source`: trigger a single-source polling cycle (`source`)
 
 ## Configuration
 
