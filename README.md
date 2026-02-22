@@ -1,15 +1,20 @@
 # AI CVE Watcher
 
-Continuously ingests CVEs from a configurable lookback window, enriches them with multi-source threat context, and produces analyst-ready prioritization for securing AI environments.
+Continuously ingests CVEs across a configurable lookback window, correlates them with open, vendor, and national advisory sources, and produces analyst-ready prioritization for securing AI and automation environments.
+
+The application is designed for analysts and researchers who need more than CVSS-only triage: it combines exploitability signals, patch/fix context, source corroboration, regional escalation indicators, and asset-scope matching in a single workflow.
 
 ## What It Does
 
-- Pulls CVEs from NVD
-- Scores likely AI-agent / LLM ecosystem relevance
-- Correlates findings with MITRE ATLAS and MITRE ATT&CK
-- Enriches each finding with exploitability, fix, ecosystem, vendor, and regional/national intelligence signals
-- Supports triage workflow, change tracking, and runtime polling controls
-- Exposes findings in dashboard, JSONL, markdown, CSV, and JSON exports
+- Ingests CVEs from NVD and enriches them with supporting context from KEV, EPSS, CVE.org, OSV, GHSA, CIRCL, vendor advisories, distro trackers, and selected national/public advisory sources.
+- Scores likely AI-agent / LLM ecosystem relevance and prioritizes findings using deterministic, evidence-weighted scoring and change classification.
+- Correlates findings with MITRE ATLAS and MITRE ATT&CK to provide adversary-technique context for analyst triage.
+- Adds patch and remediation intelligence, including package/fix-version context and a source-by-source patch availability matrix (NVD, CVE.org, OSV, MSRC, Red Hat, Debian).
+- Computes corroboration metrics (confidence label, independent-source count, source-family presence) and highlights regional escalation patterns across national advisories.
+- Supports asset-aware prioritization using `TARGET_*` scope settings and optional inventory-file matching (`ASSET_INVENTORY_PATH` for JSON/CSV inventory inputs).
+- Provides an analyst workflow in the dashboard with filtering, sorting, saved views/presets, triage states/notes, contradiction flags, and detailed remediation context.
+- Provides runtime polling operations: auto-poll controls, interval tuning, per-source manual polling, source freshness/reliability telemetry, cooldowns, poll history, retry, and audit exports.
+- Exposes findings and operations data through the dashboard and file/API outputs (`JSONL`, markdown reports, CSV/JSON findings exports, and poll history CSV/JSON exports).
 
 ## Data Feeds Included
 
