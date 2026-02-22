@@ -98,7 +98,7 @@ The app currently enriches with:
 - Red Hat Security Data API
 - Debian Security Tracker
 - ATT&CK feed metadata, OpenVEX, regional/national RSS/CSAF/JVN sources
-- Public advisory HTML sources: CISA ICS, CERT-FR, BSI/CERT-Bund (Phase 5 regional escalation signals)
+- Public advisory HTML sources: CISA ICS, CERT-FR, BSI/CERT-Bund (regional escalation signals)
 
 ## Polling API Endpoints
 
@@ -127,9 +127,9 @@ The app currently enriches with:
 - If a source freshness card shows repeated errors, inspect upstream availability and retry with `Poll Now`.
 
 
-## Phase 5 UI Signals
+## Corroboration and Patch Context UI Signals
 
-The right-side detail panel now includes a `Phase 5 Correlation` section with:
+The right-side detail panel now includes a `Corroboration & Patch Context` section with:
 - corroboration score + confidence label
 - independent-source count and source-family presence
 - regional escalation badges

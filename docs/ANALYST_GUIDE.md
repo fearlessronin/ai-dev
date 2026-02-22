@@ -65,9 +65,9 @@ If OpenVEX marks a CVE as `not_affected`, validate quickly and downgrade unless 
 - If a source card shows `error` or stale freshness, use `Poll Now` after network/API recovery.
 
 
-## Phase 5 Analyst Signals
+## Corroboration and Patch Context Signals
 
-Use the right-side `Phase 5 Correlation` panel to quickly assess:
+Use the right-side `Corroboration & Patch Context` panel to quickly assess:
 - whether a finding is corroborated by independent source families (not just one feed)
 - whether regional escalation is emerging across national advisories
 - whether the finding maps to your configured asset/package scope

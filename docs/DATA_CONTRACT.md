@@ -29,9 +29,9 @@
 - Reporter enforces required field presence before writing each record.
 
 
-## Phase 5 additive fields (selected)
+## Corroboration and Patch Context additive fields (selected)
 
-Examples of new Phase 5 fields now emitted:
+Examples of corroboration/patch context fields now emitted:
 - `source_corroboration_count`, `source_corroboration_score`, `source_confidence_label`
 - `source_corroboration_sources`, `source_family_presence`
 - `regional_escalation_badges`

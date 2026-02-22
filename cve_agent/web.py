@@ -123,12 +123,58 @@ def _to_csv(findings: list[dict]) -> str:
         "triage_state",
         "regional_signal_count",
         "regional_sources",
+        "source_corroboration_score",
+        "source_confidence_label",
+        "source_corroboration_count",
+        "regional_escalation_badges",
+        "asset_mapping_score",
+        "asset_mapping_hits",
+        "patch_availability_summary",
     ]
     out = StringIO()
     writer = csv.DictWriter(out, fieldnames=fields)
     writer.writeheader()
     for f in findings:
-        writer.writerow({k: f.get(k) for k in fields})
+        row = {k: f.get(k) for k in fields}
+        for key in ("regional_sources", "regional_escalation_badges"):
+            if isinstance(row.get(key), list):
+                row[key] = ";".join(str(x) for x in row[key])
+        if isinstance(row.get("asset_mapping_hits"), list):
+            row["asset_mapping_hits"] = ";".join(
+                str((x or {}).get("matched_value") or (x or {}).get("target") or "")
+                for x in row["asset_mapping_hits"]
+                if isinstance(x, dict)
+            )
+        writer.writerow(row)
+    return out.getvalue()
+
+
+def _to_json(findings: list[dict]) -> bytes:
+    return json.dumps(findings).encode("utf-8")
+
+
+def _poll_history_to_csv(history: list[dict]) -> str:
+    fields = [
+        "started",
+        "completed",
+        "status",
+        "poll_kind",
+        "source",
+        "trigger_origin",
+        "duration_ms",
+        "new_findings",
+        "records_polled",
+        "failed_sources",
+        "error",
+    ]
+    out = StringIO()
+    writer = csv.DictWriter(out, fieldnames=fields)
+    writer.writeheader()
+    for h in history:
+        row = {k: h.get(k) for k in fields}
+        if isinstance(row.get("failed_sources"), list):
+            row["failed_sources"] = ";".join(str(x) for x in row["failed_sources"])
+        writer.writerow(row)
     return out.getvalue()
 
 
@@ -152,8 +198,14 @@ def serve(
                 return self._send_findings()
             if path == "/api/export.csv":
                 return self._send_export_csv()
+            if path == "/api/export.json":
+                return self._send_export_json()
             if path == "/api/poll/status":
                 return self._send_poll_status()
+            if path == "/api/poll/history.csv":
+                return self._send_poll_history_csv()
+            if path == "/api/poll/history.json":
+                return self._send_poll_history_json()
             if path.startswith("/api/report/"):
                 cve_id = path.rsplit("/", 1)[-1]
                 return self._send_report(cve_id)
@@ -226,6 +278,31 @@ def serve(
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(csv_payload)
+
+        def _send_export_json(self) -> None:
+            payload = _to_json(self._read_findings())
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Disposition", "attachment; filename=findings.json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def _send_poll_history_csv(self) -> None:
+            history = [] if poll_controller is None else list((poll_controller.status() or {}).get("history", []))
+            payload = _poll_history_to_csv(history).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", "attachment; filename=poll_history.csv")
+            self.send_header("Content-Length", str(len(payload)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(payload)
+
+        def _send_poll_history_json(self) -> None:
+            history = [] if poll_controller is None else list((poll_controller.status() or {}).get("history", []))
+            self._send_json({"history": history})
 
         def _send_poll_status(self) -> None:
             if poll_controller is None:

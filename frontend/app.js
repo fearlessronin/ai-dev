@@ -4,6 +4,7 @@ const state = {
   selectedId: null,
   statFilter: "",
   pollStatus: null,
+  savedViews: {},
 };
 
 
@@ -35,6 +36,7 @@ const el = {
   resetFilters: document.getElementById("reset-filters"),
   refresh: document.getElementById("refresh"),
   exportCsv: document.getElementById("export-csv"),
+  exportJson: document.getElementById("export-json"),
   detailTitle: document.getElementById("detail-title"),
   detailMeta: document.getElementById("detail-meta"),
   detailContent: document.getElementById("detail-content"),
@@ -62,14 +64,125 @@ const el = {
   pollSave: document.getElementById("poll-save"),
   pollRunNow: document.getElementById("poll-run-now"),
   pollSummary: document.getElementById("poll-summary"),
+  pollAlerts: document.getElementById("poll-alerts"),
   pollSources: document.getElementById("poll-sources"),
+  pollSourcesUnhealthyOnly: document.getElementById("poll-sources-unhealthy-only"),
   pollHistory: document.getElementById("poll-history"),
   pollHistoryErrorsOnly: document.getElementById("poll-history-errors-only"),
   pollHistorySource: document.getElementById("poll-history-source"),
+  pollHistoryExportCsv: document.getElementById("poll-history-export-csv"),
+  pollHistoryExportJson: document.getElementById("poll-history-export-json"),
+  savedViewSelect: document.getElementById("saved-view-select"),
+  savedViewName: document.getElementById("saved-view-name"),
+  savedViewApply: document.getElementById("saved-view-apply"),
+  savedViewSave: document.getElementById("saved-view-save"),
+  savedViewDelete: document.getElementById("saved-view-delete"),
 };
 
 function fmt(n) {
   return Number(n || 0).toFixed(2);
+}
+
+
+const SAVED_VIEWS_STORAGE_KEY = "ai-cve-radar.saved-views.v1";
+
+function currentFilterPreset() {
+  return {
+    search: el.search.value,
+    category: el.category.value,
+    ecosystem: el.ecosystem.value,
+    triageState: el.triageState.value,
+    sortBy: el.sortBy.value,
+    confidence: el.confidence.value,
+    epssMin: el.epssMin.value,
+    evidenceMin: el.evidenceMin.value,
+    hasKev: el.hasKev.checked,
+    hasFix: el.hasFix.checked,
+    hasRegional: el.hasRegional.checked,
+    hasVendorCorroboration: el.hasVendorCorroboration.checked,
+    hasDistroContext: el.hasDistroContext.checked,
+    inScope: el.inScope.checked,
+    hasContradiction: el.hasContradiction.checked,
+    hasAtlas: el.hasAtlas.checked,
+    hasAttack: el.hasAttack.checked,
+    highMitre: el.highMitre.checked,
+    highCorroboration: el.highCorroboration.checked,
+    statFilter: state.statFilter || "",
+  };
+}
+
+function applyFilterPreset(preset) {
+  if (!preset || typeof preset !== "object") return;
+  el.search.value = preset.search || "";
+  el.category.value = preset.category || "";
+  el.ecosystem.value = preset.ecosystem || "";
+  el.triageState.value = preset.triageState || "";
+  el.sortBy.value = preset.sortBy || "priority";
+  el.confidence.value = String(preset.confidence ?? "0");
+  el.epssMin.value = String(preset.epssMin ?? "0");
+  el.evidenceMin.value = String(preset.evidenceMin ?? "0");
+  el.confidenceValue.textContent = fmt(el.confidence.value);
+  el.epssMinValue.textContent = fmt(el.epssMin.value);
+  el.evidenceMinValue.textContent = fmt(el.evidenceMin.value);
+  el.hasKev.checked = Boolean(preset.hasKev);
+  el.hasFix.checked = Boolean(preset.hasFix);
+  el.hasRegional.checked = Boolean(preset.hasRegional);
+  el.hasVendorCorroboration.checked = Boolean(preset.hasVendorCorroboration);
+  el.hasDistroContext.checked = Boolean(preset.hasDistroContext);
+  el.inScope.checked = Boolean(preset.inScope);
+  el.hasContradiction.checked = Boolean(preset.hasContradiction);
+  el.hasAtlas.checked = Boolean(preset.hasAtlas);
+  el.hasAttack.checked = Boolean(preset.hasAttack);
+  el.highMitre.checked = Boolean(preset.highMitre);
+  el.highCorroboration.checked = Boolean(preset.highCorroboration);
+  state.statFilter = preset.statFilter || "";
+  renderStats();
+  applyFilters();
+}
+
+function loadSavedViews() {
+  try {
+    const raw = window.localStorage.getItem(SAVED_VIEWS_STORAGE_KEY);
+    state.savedViews = raw ? JSON.parse(raw) : {};
+  } catch {
+    state.savedViews = {};
+  }
+  if (!state.savedViews || typeof state.savedViews !== "object") state.savedViews = {};
+}
+
+function persistSavedViews() {
+  try {
+    window.localStorage.setItem(SAVED_VIEWS_STORAGE_KEY, JSON.stringify(state.savedViews));
+  } catch {
+    // no-op
+  }
+}
+
+function renderSavedViews() {
+  if (!el.savedViewSelect) return;
+  const current = el.savedViewSelect.value;
+  el.savedViewSelect.innerHTML = '<option value="">Select</option>';
+  Object.keys(state.savedViews).sort((a, b) => a.localeCompare(b)).forEach((name) => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    el.savedViewSelect.appendChild(opt);
+  });
+  el.savedViewSelect.value = state.savedViews[current] ? current : "";
+}
+
+function unhealthySourceNames(status) {
+  const out = [];
+  const sources = (status && status.sources) || {};
+  Object.entries(sources).forEach(([name, s]) => {
+    const rel = (s && s.reliability) || {};
+    const lowSuccess = typeof rel.success_rate === "number" && rel.total_polls >= 3 && rel.success_rate < 0.8;
+    const failures = Number(rel.consecutive_failures || 0) > 0;
+    const stale = Boolean(s && s.stale);
+    const errored = String((s && s.status) || "") === "error";
+    if (lowSuccess || failures || stale || errored) out.push(name);
+  });
+  return out.sort();
 }
 
 function parseDate(value) {
@@ -184,7 +297,7 @@ function patchMatrixPreview(matrix) {
     .join(" | ");
 }
 
-function phase5SummaryText(f) {
+function corroborationPatchContextText(f) {
   const badges = (f.regional_escalation_badges || []).join(", ") || "none";
   const assetHits = (f.asset_mapping_hits || [])
     .slice(0, 5)
@@ -526,7 +639,7 @@ async function selectFinding(f) {
     el.vendorSummary.textContent = vendorCorroborationSummary(f);
   }
   if (el.phase5Summary) {
-    el.phase5Summary.textContent = phase5SummaryText(f);
+    el.phase5Summary.textContent = corroborationPatchContextText(f);
   }
   renderPatchMatrix(f.patch_availability_matrix);
   el.detailContent.textContent = "Loading report...";
@@ -549,7 +662,6 @@ function switchView(view) {
   const radar = view === "radar";
   el.viewRadar.classList.toggle("hidden", !radar);
   el.viewDocs.classList.toggle("hidden", radar);
-
   el.viewTabs.forEach((button) => {
     button.classList.toggle("active", button.dataset.view === view);
   });
@@ -665,8 +777,22 @@ function renderPollStatus() {
 
   populatePollHistorySourceFilter(status);
 
+  const unhealthy = unhealthySourceNames(status);
+  if (el.pollAlerts) {
+    if (unhealthy.length) {
+      el.pollAlerts.classList.remove("hidden");
+      el.pollAlerts.textContent = `Source reliability alerts: ${unhealthy.length} unhealthy source(s): ${unhealthy.join(", ")}`;
+    } else {
+      el.pollAlerts.classList.add("hidden");
+      el.pollAlerts.textContent = "";
+    }
+  }
+
   const sources = status.sources || {};
-  const names = Object.keys(sources).sort();
+  const names = Object.keys(sources).sort().filter((name) => {
+    if (!el.pollSourcesUnhealthyOnly || !el.pollSourcesUnhealthyOnly.checked) return true;
+    return unhealthy.includes(name);
+  });
   if (!names.length) {
     el.pollSources.innerHTML = "<div class=\"poll-source\">No source telemetry yet.</div>";
     return;
@@ -685,6 +811,9 @@ function renderPollStatus() {
       <p class="poll-source__meta">duration: ${s.duration_ms == null ? "n/a" : `${s.duration_ms}ms`}</p>
       <p class="poll-source__meta">records: ${Number(s.records || 0)}</p>
       <p class="poll-source__meta">error: ${s.last_error || "none"}</p>
+      <p class="poll-source__meta">stale: ${s.stale ? `yes (${Math.floor(Number(s.last_success_age_seconds || 0) / 60)}m age)` : "no"}</p>
+      <p class="poll-source__meta">cooldown: ${Number(s.cooldown_remaining_seconds || 0)}s | queued: ${s.queued ? "yes" : "no"}</p>
+      <p class="poll-source__meta">reliability: ${((s.reliability || {}).success_rate ?? null) == null ? "n/a" : fmt((s.reliability || {}).success_rate)} | fails: ${Number((s.reliability || {}).consecutive_failures || 0)} | avg: ${((s.reliability || {}).avg_duration_ms ?? null) == null ? "n/a" : `${(s.reliability || {}).avg_duration_ms}ms`}</p>
       <div class="poll-source__actions">
         <button type="button" class="poll-source-run" data-source="${name}">Poll Source</button>
       </div>
@@ -823,6 +952,23 @@ function bindEvents() {
     window.location.href = "/api/export.csv";
   });
 
+  if (el.exportJson) {
+    el.exportJson.addEventListener("click", () => {
+      window.location.href = "/api/export.json";
+    });
+  }
+
+  if (el.pollHistoryExportCsv) {
+    el.pollHistoryExportCsv.addEventListener("click", () => {
+      window.location.href = "/api/poll/history.csv";
+    });
+  }
+  if (el.pollHistoryExportJson) {
+    el.pollHistoryExportJson.addEventListener("click", () => {
+      window.location.href = "/api/poll/history.json";
+    });
+  }
+
   el.triageSave.addEventListener("click", async () => {
     try {
       await saveTriage();
@@ -836,6 +982,9 @@ function bindEvents() {
   }
   if (el.pollHistorySource) {
     el.pollHistorySource.addEventListener("change", () => renderPollHistory(state.pollStatus));
+  }
+  if (el.pollSourcesUnhealthyOnly) {
+    el.pollSourcesUnhealthyOnly.addEventListener("change", () => renderPollStatus());
   }
   el.pollSources.addEventListener("click", async (event) => {
     const target = event.target;
@@ -864,6 +1013,41 @@ function bindEvents() {
       } catch {
         alert("Failed to retry poll history entry.");
       }
+    });
+  }
+
+  if (el.savedViewSave) {
+    el.savedViewSave.addEventListener("click", () => {
+      const name = (el.savedViewName.value || "").trim();
+      if (!name) {
+        alert("Enter a preset name.");
+        return;
+      }
+      state.savedViews[name] = currentFilterPreset();
+      persistSavedViews();
+      renderSavedViews();
+      el.savedViewSelect.value = name;
+    });
+  }
+  if (el.savedViewApply) {
+    el.savedViewApply.addEventListener("click", () => {
+      const name = el.savedViewSelect.value;
+      if (!name || !state.savedViews[name]) return;
+      applyFilterPreset(state.savedViews[name]);
+    });
+  }
+  if (el.savedViewDelete) {
+    el.savedViewDelete.addEventListener("click", () => {
+      const name = el.savedViewSelect.value || (el.savedViewName.value || "").trim();
+      if (!name || !state.savedViews[name]) return;
+      delete state.savedViews[name];
+      persistSavedViews();
+      renderSavedViews();
+    });
+  }
+  if (el.savedViewSelect) {
+    el.savedViewSelect.addEventListener("change", () => {
+      el.savedViewName.value = el.savedViewSelect.value || "";
     });
   }
 
@@ -909,7 +1093,6 @@ function bindEvents() {
     renderStats();
     applyFilters();
   });
-
   el.viewTabs.forEach((button) => {
     button.addEventListener("click", () => {
       switchView(button.dataset.view);
@@ -928,7 +1111,9 @@ function bindEvents() {
 }
 
 (async function init() {
+  loadSavedViews();
   bindEvents();
+  renderSavedViews();
   el.confidenceValue.textContent = fmt(el.confidence.value);
   el.epssMinValue.textContent = fmt(el.epssMin.value);
   el.evidenceMinValue.textContent = fmt(el.evidenceMin.value);

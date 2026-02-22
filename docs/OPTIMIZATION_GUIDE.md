@@ -78,7 +78,7 @@ Use broader scope and longer windows to discover emerging patterns:
 Then convert findings back into tighter production rules.
 
 
-## Corroboration Tuning (Phase 5)
+## Corroboration Tuning
 
 - Treat `source_corroboration_score >= 0.80` as strong confirmation, especially with asset matches.
 - Review `regional_escalation_badges` daily to detect cross-country advisory amplification.

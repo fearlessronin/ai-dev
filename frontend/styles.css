@@ -551,3 +551,39 @@ button {
   color: rgba(255,255,255,0.75);
 }
 
+
+
+.poll-alerts {
+  margin-top: 0.5rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(255, 150, 120, 0.35);
+  background: rgba(255, 120, 90, 0.08);
+  border-radius: 10px;
+  color: #ffd6c7;
+  font-size: 0.82rem;
+}
+
+.poll-export-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.preset-box {
+  margin: 0.8rem 0;
+  padding: 0.65rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+}
+
+.preset-box h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+}
+
+.preset-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.35rem;
+}

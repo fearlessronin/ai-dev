@@ -9,7 +9,7 @@ Continuously ingests CVEs from a configurable lookback window, enriches them wit
 - Correlates findings with MITRE ATLAS and MITRE ATT&CK
 - Enriches each finding with exploitability, fix, ecosystem, vendor, and regional/national intelligence signals
 - Supports triage workflow, change tracking, and runtime polling controls
-- Exposes findings in dashboard, JSONL, markdown, and CSV
+- Exposes findings in dashboard, JSONL, markdown, CSV, and JSON exports
 
 ## Data Feeds Included
 
@@ -109,6 +109,9 @@ Serve polling flags:
 - `--poll-interval-minutes`: override polling cadence at startup (applies to `daemon` and `serve --poll`).
 
 Dashboard Poll Controls (top bar):
+- Reliability alerts: highlights stale/erroring/low-success-rate sources.
+- `Unhealthy sources only` toggle: filters source cards to problem sources.
+
 - Auto-poll toggle: enable/disable background polling without restart.
 - Interval slider: set polling cadence at runtime.
 - `Poll Now` button: trigger an immediate full-source refresh (returns a clear `already running` response if a poll is in progress).
@@ -119,8 +122,15 @@ Dashboard Poll Controls (top bar):
 - Recent Poll Runs: rolling audit trail of recent poll cycles (status, duration, new findings, failed sources, error summary).
 - Poll history filters: `Errors only` and `Source` filters for fast troubleshooting.
 - Retry from history: retry a failed/source poll directly from the `Recent Poll Runs` list.
+- Unhealthy-source filter: focus source cards on stale/erroring/low-reliability feeds.
+- Poll history export: download poll audit history as CSV or JSON.
 
-## Corroboration, Patch Matrix, and Asset Mapping
+## Corroboration, Patch Matrix, Asset Mapping, and Saved Views
+
+- `Export CSV` / `Export JSON` buttons: download findings with analyst enrichment fields for sharing and offline analysis.
+
+The dashboard supports saved analyst views/presets (stored in browser local storage) for recurring filter/sort combinations such as `High corroboration + in scope` or `Vendor patch watch`.
+
 
 The dashboard now surfaces advanced correlation context per finding:
 - Source corroboration score + confidence label (`low` / `medium` / `high`)
@@ -195,6 +205,15 @@ pre-commit run --all-files
 - `just validate-inventory` (optionally `path=examples/assets.inventory.csv`)
 
 ## Polling API
+
+Poll history export endpoints:
+- `GET /api/poll/history.csv`
+- `GET /api/poll/history.json`
+
+Findings export endpoints:
+- `GET /api/export.csv` (includes corroboration/asset/patch context columns)
+- `GET /api/export.json`
+
 
 - `GET /api/poll/status`: current polling state + per-source freshness telemetry
 - `POST /api/poll/config`: update runtime polling config (`enabled`, `interval_minutes`)

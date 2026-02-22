@@ -38,6 +38,14 @@
           <button id="poll-run-now">Poll Now</button>
         </div>
         <div id="poll-summary" class="poll-summary">Loading poll status...</div>
+        <div id="poll-alerts" class="poll-alerts hidden"></div>
+        <div class="poll-history-controls">
+          <label><input type="checkbox" id="poll-sources-unhealthy-only" /> Unhealthy sources only</label>
+          <div class="poll-export-actions">
+            <button id="poll-history-export-csv">Export Poll History CSV</button>
+            <button id="poll-history-export-json">Export Poll History JSON</button>
+          </div>
+        </div>
         <div id="poll-sources" class="poll-sources"></div>
         <div class="poll-history-wrap">
           <h3>Recent Poll Runs</h3>
@@ -114,6 +122,25 @@
 
           <button id="reset-filters" class="reset-filters">Reset Filters</button>
 
+          <div class="preset-box">
+            <h3>Saved Views</h3>
+            <label>
+              Preset
+              <select id="saved-view-select">
+                <option value="">Select</option>
+              </select>
+            </label>
+            <label>
+              Name
+              <input id="saved-view-name" type="text" placeholder="e.g. High corroboration watch" />
+            </label>
+            <div class="preset-actions">
+              <button id="saved-view-apply">Apply</button>
+              <button id="saved-view-save">Save Current</button>
+              <button id="saved-view-delete">Delete</button>
+            </div>
+          </div>
+
           <div class="check-group">
             <label><input type="checkbox" id="has-kev" /> KEV listed only</label>
             <label><input type="checkbox" id="has-fix" /> Has fix version</label>
@@ -134,6 +161,7 @@
             <h2>Recent Findings</h2>
             <div>
               <button id="export-csv">Export CSV</button>
+              <button id="export-json">Export JSON</button>
               <button id="refresh">Refresh</button>
             </div>
           </div>
