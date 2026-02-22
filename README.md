@@ -83,6 +83,12 @@ python -m cve_agent.cli daemon
 python -m cve_agent.cli serve --host 127.0.0.1 --port 8080
 ```
 
+Optional: start dashboard and background polling together on startup:
+
+```bash
+python -m cve_agent.cli serve --poll --poll-interval-minutes 30 --host 127.0.0.1 --port 8080
+```
+
 Open `http://127.0.0.1:8080`.
 
 ## No-API Demo Mode
