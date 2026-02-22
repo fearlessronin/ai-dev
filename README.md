@@ -89,7 +89,11 @@ Optional: start dashboard and background polling together on startup:
 python -m cve_agent.cli serve --poll --poll-interval-minutes 30 --host 127.0.0.1 --port 8080
 ```
 
-Open http://127.0.0.1:8080.\n\nServe polling flags:\n- --poll: enable background polling while the dashboard is running.\n- --poll-interval-minutes: override polling cadence at startup (applies to daemon and serve --poll).
+Open `http://127.0.0.1:8080`.
+
+Serve polling flags:
+- `--poll`: enable background polling while the dashboard is running.
+- `--poll-interval-minutes`: override polling cadence at startup (applies to `daemon` and `serve --poll`).
 
 ## No-API Demo Mode
 
