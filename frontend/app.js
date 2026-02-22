@@ -133,6 +133,18 @@ function vendorCorroborationSummary(f) {
   lines.push(`Fix context (preview): ${textPreview(f.fixed_versions)}`);
   return lines.join("\n");
 }
+function resetDetailPanel(message) {
+  el.detailTitle.textContent = "Select a CVE";
+  el.detailMeta.textContent = "";
+  el.triageEditState.value = "new";
+  el.triageEditNote.value = "";
+  el.mitrePanel.classList.add("hidden");
+  if (el.vendorSummary) {
+    el.vendorSummary.textContent = "Select a finding to view vendor and distro corroboration details.";
+  }
+  el.detailContent.textContent = message;
+}
+
 function sortFindings(list) {
   const mode = el.sortBy.value;
   const sorted = [...list];
@@ -289,6 +301,24 @@ function applyFilters() {
   });
 
   state.filtered = sortFindings(filtered);
+
+  if (!state.filtered.length) {
+    state.selectedId = null;
+    resetDetailPanel(
+      state.findings.length
+        ? "No findings match current filters."
+        : "No findings loaded yet. Use Poll Now to fetch data."
+    );
+    renderCards();
+    return;
+  }
+
+  const selectedVisible = state.filtered.find((f) => f.cve_id === state.selectedId);
+  if (!selectedVisible) {
+    void selectFinding(state.filtered[0]);
+    return;
+  }
+
   renderCards();
 }
 
@@ -315,7 +345,9 @@ function renderStats() {
 
 function renderCards() {
   if (!state.filtered.length) {
-    el.cards.innerHTML = "<p>No findings match filters.</p>";
+    el.cards.innerHTML = state.findings.length
+      ? "<p>No findings match filters.</p>"
+      : "<p>No findings loaded yet. Use Poll Now to fetch data.</p>";
     return;
   }
 
@@ -422,7 +454,9 @@ async function selectFinding(f) {
   el.triageEditNote.value = f.triage_note || "";
 
   renderMitrePanel(f);
-  el.vendorSummary.textContent = vendorCorroborationSummary(f);
+  if (el.vendorSummary) {
+    el.vendorSummary.textContent = vendorCorroborationSummary(f);
+  }
   el.detailContent.textContent = "Loading report...";
 
   try {
