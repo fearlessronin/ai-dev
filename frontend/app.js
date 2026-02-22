@@ -47,7 +47,14 @@ const el = {
   viewTabs: document.querySelectorAll(".view-tab"),
   docLinks: document.querySelectorAll(".doc-link"),
   docTitle: document.getElementById("doc-title"),
-  docBody: document.getElementById("doc-body"),`r`n  pollEnabled: document.getElementById("poll-enabled"),`r`n  pollInterval: document.getElementById("poll-interval"),`r`n  pollIntervalValue: document.getElementById("poll-interval-value"),`r`n  pollSave: document.getElementById("poll-save"),`r`n  pollRunNow: document.getElementById("poll-run-now"),`r`n  pollSummary: document.getElementById("poll-summary"),`r`n  pollSources: document.getElementById("poll-sources"),
+  docBody: document.getElementById("doc-body"),
+  pollEnabled: document.getElementById("poll-enabled"),
+  pollInterval: document.getElementById("poll-interval"),
+  pollIntervalValue: document.getElementById("poll-interval-value"),
+  pollSave: document.getElementById("poll-save"),
+  pollRunNow: document.getElementById("poll-run-now"),
+  pollSummary: document.getElementById("poll-summary"),
+  pollSources: document.getElementById("poll-sources"),
 };
 
 function fmt(n) {
