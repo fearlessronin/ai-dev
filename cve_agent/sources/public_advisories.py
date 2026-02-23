@@ -47,6 +47,36 @@ DEFAULT_ADVISORY_FEEDS = {
         label="Cisco Security Advisories",
         url="https://sec.cloudapps.cisco.com/security/center/publicationListing.x",
     ),
+    "certcc": AdvisoryFeed(
+        key="certcc",
+        label="CERT/CC",
+        url="https://www.kb.cert.org/vuls/",
+    ),
+    "paloalto": AdvisoryFeed(
+        key="paloalto",
+        label="Palo Alto Networks Security Advisories",
+        url="https://security.paloaltonetworks.com/",
+    ),
+    "fortinet": AdvisoryFeed(
+        key="fortinet",
+        label="Fortinet PSIRT Advisories",
+        url="https://www.fortiguard.com/psirt",
+    ),
+    "vmware_broadcom": AdvisoryFeed(
+        key="vmware_broadcom",
+        label="VMware/Broadcom Security Advisories",
+        url="https://support.broadcom.com/web/ecx/security-advisory",
+    ),
+    "apple_security": AdvisoryFeed(
+        key="apple_security",
+        label="Apple Security Updates",
+        url="https://support.apple.com/en-us/100100",
+    ),
+    "android_bulletins": AdvisoryFeed(
+        key="android_bulletins",
+        label="Google Android Security Bulletins",
+        url="https://source.android.com/docs/security/bulletin",
+    ),
     "bsi": AdvisoryFeed(
         key="bsi",
         label="BSI/CERT-Bund",

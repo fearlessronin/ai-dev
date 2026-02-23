@@ -49,6 +49,12 @@ SOURCE_NAMES = [
     "suse",
     "oracle_cpu",
     "cisco",
+    "certcc",
+    "paloalto",
+    "fortinet",
+    "vmware_broadcom",
+    "apple_security",
+    "android_bulletins",
     "openvex",
     "attack_feed",
 ]
@@ -128,6 +134,25 @@ class CVEWatcher:
         cisco_map = self._call_source(
             "cisco", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "cisco")
         )
+        certcc_map = self._call_source(
+            "certcc", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "certcc")
+        )
+        paloalto_map = self._call_source(
+            "paloalto", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "paloalto")
+        )
+        fortinet_map = self._call_source(
+            "fortinet", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "fortinet")
+        )
+        vmware_broadcom_map = self._call_source(
+            "vmware_broadcom", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "vmware_broadcom")
+        )
+        apple_security_map = self._call_source(
+            "apple_security", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "apple_security")
+        )
+        android_bulletins_map = self._call_source(
+            "android_bulletins",
+            lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "android_bulletins"),
+        )
         openvex_map = self._call_source("openvex", lambda: load_openvex_map(self.settings.openvex_path))
         attack_feed_meta = self._call_source("attack_feed", self.attack_feed_client.fetch_metadata) or {}
 
@@ -148,6 +173,12 @@ class CVEWatcher:
             regional_sources.extend(suse_map.get(cve_id, []))
             regional_sources.extend(oracle_cpu_map.get(cve_id, []))
             regional_sources.extend(cisco_map.get(cve_id, []))
+            regional_sources.extend(certcc_map.get(cve_id, []))
+            regional_sources.extend(paloalto_map.get(cve_id, []))
+            regional_sources.extend(fortinet_map.get(cve_id, []))
+            regional_sources.extend(vmware_broadcom_map.get(cve_id, []))
+            regional_sources.extend(apple_security_map.get(cve_id, []))
+            regional_sources.extend(android_bulletins_map.get(cve_id, []))
             openvex_status = openvex_map.get(cve_id)
 
             vendor_sources, vendor_packages, vendor_fixed_versions = self._vendor_context_for_cve(
@@ -246,6 +277,12 @@ class CVEWatcher:
             "suse",
             "oracle_cpu",
             "cisco",
+            "certcc",
+            "paloalto",
+            "fortinet",
+            "vmware_broadcom",
+            "apple_security",
+            "android_bulletins",
         }
         candidate_ids = list(self._last_candidate_ids)
         if source in candidate_sources and not candidate_ids:
@@ -270,6 +307,14 @@ class CVEWatcher:
             "suse": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "suse"),
             "oracle_cpu": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "oracle_cpu"),
             "cisco": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "cisco"),
+            "certcc": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "certcc"),
+            "paloalto": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "paloalto"),
+            "fortinet": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "fortinet"),
+            "vmware_broadcom": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "vmware_broadcom"),
+            "apple_security": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "apple_security"),
+            "android_bulletins": lambda: self.public_advisory_client.fetch_feed_signals(
+                candidate_ids, "android_bulletins"
+            ),
             "openvex": lambda: load_openvex_map(self.settings.openvex_path),
             "attack_feed": self.attack_feed_client.fetch_metadata,
         }

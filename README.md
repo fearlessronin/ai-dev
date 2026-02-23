@@ -9,7 +9,7 @@ The application is designed for analysts and researchers who need more than CVSS
 - Ingests CVEs from NVD and enriches them with supporting context from KEV, EPSS, CVE.org, OSV, GHSA, CIRCL, vendor advisories, distro trackers, and selected national/public advisory sources.
 - Scores likely AI-agent / LLM ecosystem relevance and prioritizes findings using deterministic, evidence-weighted scoring and change classification.
 - Correlates findings with MITRE ATLAS and MITRE ATT&CK to provide adversary-technique context for analyst triage.
-- Adds patch and remediation intelligence, including package/fix-version context, vendor/distro corroboration signals (MSRC, Red Hat, Debian, Ubuntu, SUSE, Oracle, Cisco advisories), and a source-by-source patch availability matrix (NVD, CVE.org, OSV, MSRC, Red Hat, Debian).
+- Adds patch and remediation intelligence, including package/fix-version context, vendor/distro corroboration signals (MSRC, Red Hat, Debian, Ubuntu, SUSE, Oracle, Cisco, Palo Alto, Fortinet, VMware/Broadcom, Apple, Android advisories), and a source-by-source patch availability matrix (NVD, CVE.org, OSV, MSRC, Red Hat, Debian).
 - Computes corroboration metrics (confidence label, independent-source count, source-family presence) and highlights regional escalation patterns across national advisories.
 - Supports asset-aware prioritization using `TARGET_*` scope settings and optional inventory-file matching (`ASSET_INVENTORY_PATH` for JSON/CSV inventory inputs).
 - Provides an analyst workflow in the dashboard with filtering, sorting, saved views/presets, triage states/notes, contradiction flags, and detailed remediation context.
@@ -36,6 +36,12 @@ The application is designed for analysts and researchers who need more than CVSS
 | SUSE Security Advisories | Public web advisory source (HTML parsed) | Vendor/distro corroboration signals for SUSE-managed Linux environments |
 | Oracle Critical Patch Update advisories | Public web advisory source (HTML parsed) | Vendor advisory corroboration for Oracle products and infrastructure components |
 | Cisco Security Advisories | Public web advisory source (HTML parsed) | Vendor advisory corroboration for network/security appliance exposure |
+| CERT/CC Vulnerability Notes | Public web advisory source (HTML parsed) | US CERT advisory corroboration and additional public-sector signal coverage |
+| Palo Alto Networks Security Advisories | Public web advisory source (HTML parsed) | Vendor advisory corroboration for PAN-OS and security platform exposure |
+| Fortinet PSIRT Advisories | Public web advisory source (HTML parsed) | Vendor advisory corroboration for Fortinet appliance/product exposure |
+| VMware/Broadcom Security Advisories | Public web advisory source (HTML parsed) | Vendor advisory corroboration for VMware/Broadcom virtualization and infrastructure products |
+| Apple Security Updates | Public web advisory source (HTML parsed) | Vendor advisory corroboration for Apple OS/platform security updates |
+| Google Android Security Bulletins | Public web advisory source (HTML parsed) | Vendor/public bulletin corroboration for Android platform/device patch context |
 | CISA ICS advisories | Public web advisory source (HTML parsed) | ICS/OT national advisory corroboration and escalation signals |
 | CERT-FR advisories | Public web advisory source (HTML parsed) | French national advisory corroboration and regional escalation signals |
 | BSI/CERT-Bund advisories | Public web advisory source (HTML parsed) | German national advisory corroboration and regional escalation signals |
@@ -49,7 +55,7 @@ The application is designed for analysts and researchers who need more than CVSS
 
 - Multi-signal prioritization reduces CVSS-only noise.
 - Scope-aware ranking via `TARGET_ECOSYSTEMS`, `TARGET_PACKAGES`, and `TARGET_CPES`.
-- Vendor and distro corroboration (MSRC, Red Hat, Debian, Ubuntu, SUSE, Oracle, Cisco advisory signals) improves patch-context confidence.
+- Vendor and distro corroboration (MSRC, Red Hat, Debian, Ubuntu, SUSE, Oracle, Cisco, Palo Alto, Fortinet, VMware/Broadcom, Apple, Android advisory signals) improves patch-context confidence.
 - Change tracking: `new`, `priority_changed`, `newly_fixed`, `unchanged`.
 - Triage states and notes: `new`, `investigating`, `mitigated`, `accepted_risk`.
 - Contradiction flags help resolve conflicting source data quickly.
@@ -101,7 +107,7 @@ Use this workflow when the goal is patch execution readiness rather than broad m
   - `In target scope`
 - Sort by `Asset Mapping` (to prioritize environment impact) or `Priority`.
 - Use the patch matrix table to compare patch/fix presence across `NVD`, `CVE.org`, `OSV`, and vendor/distro sources.
-- Use vendor/distro corroboration details (MSRC, Red Hat, Debian, Ubuntu, SUSE, Oracle, Cisco) to validate patch guidance before routing tickets.
+- Use vendor/distro corroboration details (MSRC, Red Hat, Debian, Ubuntu, SUSE, Oracle, Cisco, Palo Alto, Fortinet, VMware/Broadcom, Apple, Android) to validate patch guidance before routing tickets.
 - Export findings (`CSV`/`JSON`) for patch teams or change-control workflows.
 
 Recommended outcome:

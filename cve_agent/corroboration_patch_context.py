@@ -10,6 +10,11 @@ VENDOR_SOURCES = {
     "suse security advisories",
     "oracle critical patch update",
     "cisco security advisories",
+    "palo alto networks security advisories",
+    "fortinet psirt advisories",
+    "vmware/broadcom security advisories",
+    "apple security updates",
+    "google android security bulletins",
 }
 
 
@@ -75,6 +80,7 @@ def _is_national_source(source: str) -> bool:
         "govcert",
         "hkcert",
         "cert-eu",
+        "cert/cc",
     )
     return any(k in s for k in keywords)
 

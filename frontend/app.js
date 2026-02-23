@@ -439,6 +439,11 @@ const VENDOR_SOURCE_LABELS = new Set([
   "suse security advisories",
   "oracle critical patch update",
   "cisco security advisories",
+  "palo alto networks security advisories",
+  "fortinet psirt advisories",
+  "vmware/broadcom security advisories",
+  "apple security updates",
+  "google android security bulletins",
 ]);
 
 function hasMsrcSignal(f) {
@@ -476,6 +481,31 @@ function hasUbuntuSignal(f) {
   return src.has("ubuntu security notices");
 }
 
+function hasPaloAltoSignal(f) {
+  const src = normalizedSources(f);
+  return src.has("palo alto networks security advisories");
+}
+
+function hasFortinetSignal(f) {
+  const src = normalizedSources(f);
+  return src.has("fortinet psirt advisories");
+}
+
+function hasVmwareBroadcomSignal(f) {
+  const src = normalizedSources(f);
+  return src.has("vmware/broadcom security advisories");
+}
+
+function hasAppleSecuritySignal(f) {
+  const src = normalizedSources(f);
+  return src.has("apple security updates");
+}
+
+function hasAndroidBulletinSignal(f) {
+  const src = normalizedSources(f);
+  return src.has("google android security bulletins");
+}
+
 function hasVendorCorroboration(f) {
   const src = normalizedSources(f);
   return Array.from(VENDOR_SOURCE_LABELS).some((s) => src.has(s));
@@ -495,6 +525,11 @@ function vendorCorroborationSummary(f) {
   sourceLines.push(`SUSE: ${hasSuseSignal(f) ? "yes" : "no"}`);
   sourceLines.push(`Oracle: ${hasOracleSignal(f) ? "yes" : "no"}`);
   sourceLines.push(`Cisco: ${hasCiscoSignal(f) ? "yes" : "no"}`);
+  sourceLines.push(`Palo Alto: ${hasPaloAltoSignal(f) ? "yes" : "no"}`);
+  sourceLines.push(`Fortinet: ${hasFortinetSignal(f) ? "yes" : "no"}`);
+  sourceLines.push(`VMware/Broadcom: ${hasVmwareBroadcomSignal(f) ? "yes" : "no"}`);
+  sourceLines.push(`Apple: ${hasAppleSecuritySignal(f) ? "yes" : "no"}`);
+  sourceLines.push(`Android: ${hasAndroidBulletinSignal(f) ? "yes" : "no"}`);
   lines.push(sourceLines.join(" | "));
 
   const vendorSources = (f.regional_sources || []).filter((s) => {
@@ -808,6 +843,11 @@ function renderCards() {
         ${hasSuseSignal(f) ? `<span class="badge badge-distro">SUSE</span>` : ""}
         ${hasOracleSignal(f) ? `<span class="badge badge-vendor">Oracle</span>` : ""}
         ${hasCiscoSignal(f) ? `<span class="badge badge-vendor">Cisco</span>` : ""}
+        ${hasPaloAltoSignal(f) ? `<span class="badge badge-vendor">Palo Alto</span>` : ""}
+        ${hasFortinetSignal(f) ? `<span class="badge badge-vendor">Fortinet</span>` : ""}
+        ${hasVmwareBroadcomSignal(f) ? `<span class="badge badge-vendor">VMware/Broadcom</span>` : ""}
+        ${hasAppleSecuritySignal(f) ? `<span class="badge badge-vendor">Apple</span>` : ""}
+        ${hasAndroidBulletinSignal(f) ? `<span class="badge badge-vendor">Android</span>` : ""}
         <span class="badge badge-corroboration">corr ${fmt(f.source_corroboration_score)}</span>
         ${(f.asset_mapping_hits || []).length ? `<span class="badge badge-corroboration">asset ${(f.asset_mapping_hits || []).length}</span>` : ""}
         ${(f.regional_escalation_badges || []).length ? `<span class="badge badge-alert">escalation ${(f.regional_escalation_badges || []).length}</span>` : ""}
