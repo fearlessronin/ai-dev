@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/styles.css?v=20260222h" />
+    <link rel="stylesheet" href="/assets/styles.css?v=__ASSET_VERSION__" />
   </head>
   <body>
     <div class="bg-glow bg-glow-a"></div>
@@ -39,21 +39,30 @@
         </div>
         <div id="poll-summary" class="poll-summary">Loading poll status...</div>
         <div id="poll-alerts" class="poll-alerts hidden"></div>
-        <div class="poll-history-controls">
-          <label><input type="checkbox" id="poll-sources-unhealthy-only" /> Unhealthy sources only</label>
-          <div class="poll-export-actions">
-            <button id="poll-history-export-csv">Export Poll History CSV</button>
-            <button id="poll-history-export-json">Export Poll History JSON</button>
+        <button id="poll-show-feeds-btn" class="poll-show-feeds-btn" type="button" aria-pressed="true">Hide Data Feeds</button>
+        <div id="poll-sources-panel" class="poll-sources-panel">
+          <button id="poll-sources-toggle" class="poll-sources-toggle" type="button" aria-expanded="true">
+            <span id="poll-sources-summary">Data Feed Status (click to collapse)</span>
+            <span id="poll-sources-toggle-icon" class="poll-sources-toggle__icon">-</span>
+          </button>
+          <div id="poll-sources-body" class="poll-sources-body">
+            <div class="poll-history-controls poll-history-controls--top">
+              <label><input type="checkbox" id="poll-sources-unhealthy-only" /> Unhealthy sources only</label>
+              <div class="poll-export-actions">
+                <button id="poll-history-export-csv">Export Poll History CSV</button>
+                <button id="poll-history-export-json">Export Poll History JSON</button>
+              </div>
+            </div>
+            <div id="poll-sources" class="poll-sources"></div>
+            <div class="poll-history-wrap">
+              <h3>Recent Poll Runs</h3>
+              <div class="poll-history-controls">
+                <label><input type="checkbox" id="poll-history-errors-only" /> Errors only</label>
+                <label>Source <select id="poll-history-source"><option value="">All</option></select></label>
+              </div>
+              <div id="poll-history" class="poll-history"></div>
+            </div>
           </div>
-        </div>
-        <div id="poll-sources" class="poll-sources"></div>
-        <div class="poll-history-wrap">
-          <h3>Recent Poll Runs</h3>
-          <div class="poll-history-controls">
-            <label><input type="checkbox" id="poll-history-errors-only" /> Errors only</label>
-            <label>Source <select id="poll-history-source"><option value="">All</option></select></label>
-          </div>
-          <div id="poll-history" class="poll-history"></div>
         </div>
       </section>
 
@@ -234,7 +243,7 @@
       </article>
     </section>
 
-    <script src="/assets/app.js?v=20260222h"></script>
+    <script src="/assets/app.js?v=__ASSET_VERSION__"></script>
   </body>
 </html>
 

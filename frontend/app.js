@@ -65,6 +65,13 @@ const el = {
   pollRunNow: document.getElementById("poll-run-now"),
   pollSummary: document.getElementById("poll-summary"),
   pollAlerts: document.getElementById("poll-alerts"),
+  pollShowFeeds: document.getElementById("poll-show-feeds"),
+  pollShowFeedsBtn: document.getElementById("poll-show-feeds-btn"),
+  pollSourcesPanel: document.getElementById("poll-sources-panel"),
+  pollSourcesToggle: document.getElementById("poll-sources-toggle"),
+  pollSourcesToggleIcon: document.getElementById("poll-sources-toggle-icon"),
+  pollSourcesSummary: document.getElementById("poll-sources-summary"),
+  pollSourcesBody: document.getElementById("poll-sources-body"),
   pollSources: document.getElementById("poll-sources"),
   pollSourcesUnhealthyOnly: document.getElementById("poll-sources-unhealthy-only"),
   pollHistory: document.getElementById("poll-history"),
@@ -81,6 +88,30 @@ const el = {
 
 function fmt(n) {
   return Number(n || 0).toFixed(2);
+}
+
+
+function setPollSourcesPanelOpen(isOpen) {
+  const open = Boolean(isOpen);
+  if (el.pollSourcesBody) {
+    el.pollSourcesBody.classList.toggle("hidden", !open);
+  }
+  if (el.pollSourcesToggle) {
+    el.pollSourcesToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  if (el.pollSourcesPanel) {
+    el.pollSourcesPanel.classList.toggle("is-open", open);
+  }
+  if (el.pollSourcesToggleIcon) {
+    el.pollSourcesToggleIcon.textContent = open ? "-" : "+";
+  }
+  if (el.pollShowFeeds) {
+    el.pollShowFeeds.checked = open;
+  }
+  if (el.pollShowFeedsBtn) {
+    el.pollShowFeedsBtn.setAttribute("aria-pressed", open ? "true" : "false");
+    el.pollShowFeedsBtn.textContent = open ? "Hide Data Feeds" : "Show Data Feeds";
+  }
 }
 
 
@@ -829,12 +860,19 @@ function renderPollStatus() {
   }
 
   const sources = status.sources || {};
-  const names = Object.keys(sources).sort().filter((name) => {
+  const allSourceNames = Object.keys(sources).sort();
+  if (el.pollSourcesSummary) {
+    const unhealthyCount = unhealthy.length;
+    el.pollSourcesSummary.textContent = `Data Feed Status (${allSourceNames.length} sources${unhealthyCount ? `, ${unhealthyCount} unhealthy` : ""})`;
+  }
+  const names = allSourceNames.filter((name) => {
     if (!el.pollSourcesUnhealthyOnly || !el.pollSourcesUnhealthyOnly.checked) return true;
     return unhealthy.includes(name);
   });
   if (!names.length) {
-    el.pollSources.innerHTML = "<div class=\"poll-source\">No source telemetry yet.</div>";
+    el.pollSources.innerHTML = allSourceNames.length
+      ? "<div class=\"poll-source\">No source cards match the current source filter.</div>"
+      : "<div class=\"poll-source\">No source telemetry yet.</div>";
     return;
   }
 
@@ -1017,6 +1055,23 @@ function bindEvents() {
     }
   });
 
+  if (el.pollSourcesToggle) {
+    el.pollSourcesToggle.addEventListener("click", () => {
+      const expanded = el.pollSourcesToggle.getAttribute("aria-expanded") === "true";
+      setPollSourcesPanelOpen(!expanded);
+    });
+  }
+  if (el.pollShowFeedsBtn) {
+    el.pollShowFeedsBtn.addEventListener("click", () => {
+      const expanded = el.pollSourcesToggle && el.pollSourcesToggle.getAttribute("aria-expanded") === "true";
+      setPollSourcesPanelOpen(!expanded);
+    });
+  }
+  if (el.pollShowFeeds) {
+    el.pollShowFeeds.addEventListener("change", () => {
+      setPollSourcesPanelOpen(el.pollShowFeeds.checked);
+    });
+  }
   if (el.pollHistoryErrorsOnly) {
     el.pollHistoryErrorsOnly.addEventListener("change", () => renderPollHistory(state.pollStatus));
   }
@@ -1159,6 +1214,7 @@ function bindEvents() {
   el.evidenceMinValue.textContent = fmt(el.evidenceMin.value);
   el.pollIntervalValue.textContent = String(el.pollInterval.value);
   switchView("radar");
+  setPollSourcesPanelOpen(true);
   await loadFindings();
   try {
     await loadPollStatus();

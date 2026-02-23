@@ -25,6 +25,17 @@ DOC_MAP = {
 VALID_TRIAGE_STATES = {"new", "investigating", "mitigated", "accepted_risk"}
 
 
+def _asset_version_token(frontend_dir: Path) -> str:
+    parts: list[str] = []
+    for name in ("index.html", "app.js", "styles.css"):
+        path = frontend_dir / name
+        try:
+            parts.append(str(int(path.stat().st_mtime_ns)))
+        except FileNotFoundError:
+            parts.append("0")
+    return "-".join(parts)
+
+
 def _find_listeners_for_port(port: int) -> list[tuple[str, int]]:
     try:
         result = subprocess.run(
@@ -194,7 +205,7 @@ def serve(
         def do_GET(self) -> None:  # noqa: N802
             path = unquote(self.path.split("?", 1)[0])
             if path in {"/", "/index.html"}:
-                return self._send_file(frontend_dir / "index.html")
+                return self._send_index_html()
             if path.startswith("/assets/"):
                 rel = path[len("/assets/") :]
                 return self._send_file(frontend_dir / rel)
@@ -431,6 +442,23 @@ def serve(
                 return
 
             self._send_file(target, content_type="text/markdown; charset=utf-8")
+
+        def _send_index_html(self) -> None:
+            path = frontend_dir / "index.html"
+            if not path.exists() or not path.is_file():
+                self.send_response(404)
+                self.end_headers()
+                return
+
+            text = path.read_text(encoding="utf-8")
+            text = text.replace("__ASSET_VERSION__", _asset_version_token(frontend_dir))
+            data = text.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(data)
 
         def _send_file(self, path: Path, content_type: str | None = None) -> None:
             if not path.exists() or not path.is_file():
