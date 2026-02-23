@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import unittest
 
+from cve_agent.corroboration_patch_context import apply_corroboration_patch_context
 from cve_agent.models import AnalysisResult, CVEItem
-from cve_agent.phase5 import apply_phase5_features
 
 
 def _analysis() -> AnalysisResult:
@@ -44,8 +44,8 @@ def _analysis() -> AnalysisResult:
     return result
 
 
-class Phase5FeatureTests(unittest.TestCase):
-    def test_phase5_derives_scores_badges_asset_mapping_and_patch_matrix(self) -> None:
+class CorroborationPatchContextTests(unittest.TestCase):
+    def test_derives_scores_badges_asset_mapping_and_patch_matrix(self) -> None:
         analysis = _analysis()
         cveorg_entry = {
             "containers": {
@@ -69,7 +69,7 @@ class Phase5FeatureTests(unittest.TestCase):
             ]
         }
 
-        out = apply_phase5_features(
+        out = apply_corroboration_patch_context(
             analysis,
             cveorg_entry=cveorg_entry,
             osv_entry=osv_entry,
@@ -79,6 +79,20 @@ class Phase5FeatureTests(unittest.TestCase):
             target_ecosystems=["PyPI"],
             target_packages=["acme-agent", "agent platform"],
             target_cpes=["cpe:2.3:a:acme:agent-platform"],
+            inventory_context={
+                "assets": [
+                    {
+                        "asset_id": "prod-api-01",
+                        "packages": ["acme-agent"],
+                        "ecosystems": ["PyPI"],
+                        "owner": "secops",
+                        "criticality": "critical",
+                        "environment": "prod",
+                        "business_service": "ai-api",
+                        "internet_exposed": True,
+                    }
+                ]
+            },
         )
 
         self.assertGreaterEqual(out.source_corroboration_score, 0.8)
@@ -86,6 +100,9 @@ class Phase5FeatureTests(unittest.TestCase):
         self.assertIn("transatlantic-escalation", out.regional_escalation_badges)
         self.assertGreaterEqual(out.asset_mapping_score, 0.25)
         self.assertTrue(out.asset_mapping_hits)
+        self.assertGreater(out.asset_priority_boost, 0.0)
+        self.assertIn("secops", out.asset_owners)
+        self.assertIn("ai-api", out.asset_business_services)
         self.assertIn("nvd", out.patch_availability_matrix)
         self.assertIn("cveorg", out.patch_availability_matrix)
         self.assertTrue(out.patch_availability_matrix["cveorg"]["fix_available"])

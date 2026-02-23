@@ -10,7 +10,7 @@ from cve_agent.reporter import Reporter
 from cve_agent.web import _read_triage, _write_triage
 
 
-class Phase3WorkflowTests(unittest.TestCase):
+class ReportingAndTriageWorkflowTests(unittest.TestCase):
     def _analysis(self, cve_id: str, priority: float, has_fix: bool) -> AnalysisResult:
         cve = CVEItem(
             cve_id=cve_id,

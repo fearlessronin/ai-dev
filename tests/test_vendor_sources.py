@@ -3,10 +3,16 @@ from __future__ import annotations
 import unittest
 
 from cve_agent.sources.debian import extract_debian_context
+from cve_agent.sources.public_advisories import DEFAULT_ADVISORY_FEEDS
 from cve_agent.sources.redhat import extract_redhat_context
 
 
 class VendorSourcesTests(unittest.TestCase):
+    def test_public_advisory_registry_includes_additional_vendor_feeds(self) -> None:
+        for key in ("ubuntu_usn", "suse", "oracle_cpu", "cisco"):
+            self.assertIn(key, DEFAULT_ADVISORY_FEEDS)
+            self.assertTrue(DEFAULT_ADVISORY_FEEDS[key].label)
+
     def test_extract_redhat_context(self) -> None:
         entry = {
             "package_state": [

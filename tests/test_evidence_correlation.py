@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import unittest
 
-from cve_agent.correlation_v2 import apply_phase3_correlation
+from cve_agent.evidence_correlation import apply_evidence_correlation
 from cve_agent.models import AnalysisResult, CVEItem
 
 
-class CorrelationV2Tests(unittest.TestCase):
+class EvidenceCorrelationTests(unittest.TestCase):
     def _analysis(self) -> AnalysisResult:
         cve = CVEItem(
             cve_id="CVE-TEST-3",
@@ -30,10 +30,10 @@ class CorrelationV2Tests(unittest.TestCase):
             packages=["agent-sdk"],
         )
 
-    def test_phase3_adds_evidence_and_blends_priority(self) -> None:
+    def test_adds_evidence_and_blends_priority(self) -> None:
         analysis = self._analysis()
 
-        result = apply_phase3_correlation(
+        result = apply_evidence_correlation(
             analysis,
             kev_entry={"cveID": "CVE-TEST-3"},
             epss_entry={"epss_score": 0.91},
@@ -66,10 +66,10 @@ class CorrelationV2Tests(unittest.TestCase):
         self.assertEqual(len(result.contradiction_flags), 0)
         self.assertGreater(result.priority_score, 0.60)
 
-    def test_phase3_flags_conflicting_fix_versions(self) -> None:
+    def test_flags_conflicting_fix_versions(self) -> None:
         analysis = self._analysis()
 
-        result = apply_phase3_correlation(
+        result = apply_evidence_correlation(
             analysis,
             kev_entry=None,
             epss_entry={"epss_score": 0.2},

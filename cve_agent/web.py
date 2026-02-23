@@ -129,6 +129,10 @@ def _to_csv(findings: list[dict]) -> str:
         "regional_escalation_badges",
         "asset_mapping_score",
         "asset_mapping_hits",
+        "asset_priority_boost",
+        "asset_owners",
+        "asset_business_services",
+        "asset_routing_summary",
         "patch_availability_summary",
     ]
     out = StringIO()
@@ -136,7 +140,7 @@ def _to_csv(findings: list[dict]) -> str:
     writer.writeheader()
     for f in findings:
         row = {k: f.get(k) for k in fields}
-        for key in ("regional_sources", "regional_escalation_badges"):
+        for key in ("regional_sources", "regional_escalation_badges", "asset_owners", "asset_business_services"):
             if isinstance(row.get(key), list):
                 row[key] = ";".join(str(x) for x in row[key])
         if isinstance(row.get("asset_mapping_hits"), list):

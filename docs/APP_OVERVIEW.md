@@ -31,9 +31,9 @@ AI CVE Watcher continuously ingests newly published CVEs, identifies entries lik
 - `cve_agent.sources.attack_feed.AttackFeedClient` (ATT&CK feed freshness metadata)
 - `cve_agent.sources.openvex.load_openvex_map` (local OpenVEX status overrides)
 
-5. `cve_agent.correlation_v2.apply_phase3_correlation` computes evidence-weighted score and contradictions, with optional environment targeting (`TARGET_ECOSYSTEMS`, `TARGET_PACKAGES`, `TARGET_CPES`).
+5. `cve_agent.evidence_correlation.apply_evidence_correlation` computes evidence-weighted score and contradictions, with optional environment targeting (`TARGET_ECOSYSTEMS`, `TARGET_PACKAGES`, `TARGET_CPES`).
 
-6. `cve_agent.phase5.apply_phase5_features` derives higher-order analyst context:
+6. `cve_agent.corroboration_patch_context.apply_corroboration_patch_context` derives higher-order analyst context:
 - source confidence + corroboration score
 - regional escalation badges (multi-national / transatlantic overlap)
 - asset mapping hits against configured package/ecosystem/CPE scope
@@ -69,7 +69,7 @@ AI CVE Watcher continuously ingests newly published CVEs, identifies entries lik
 - `cve_agent/sources/*.py`: external data clients/adapters
 - `cve_agent/analyzer.py`: relevance scoring + remediation templates
 - `cve_agent/correlator.py`: MITRE ATLAS/ATT&CK rule correlation
-- `cve_agent/correlation_v2.py`: evidence-weighted correlation and scope boosting
+- `cve_agent/evidence_correlation.py`: evidence-weighted correlation and scope-aware boosting
 - `cve_agent/enrichment.py`: normalized enrichment application
 - `cve_agent/reporter.py`: JSONL + markdown writers + change tracking
 - `cve_agent/store.py`: persistent seen-set state

@@ -3,7 +3,7 @@ from __future__ import annotations
 from .models import AnalysisResult
 
 
-def apply_phase3_correlation(
+def apply_evidence_correlation(
     analysis: AnalysisResult,
     kev_entry: dict | None,
     epss_entry: dict | None,
@@ -210,3 +210,8 @@ def _safe_float(value: object) -> float:
         return float(value)
     except (TypeError, ValueError):
         return 0.0
+
+
+# Backward-compatible alias for older internal references
+def apply_phase3_correlation(*args, **kwargs):
+    return apply_evidence_correlation(*args, **kwargs)

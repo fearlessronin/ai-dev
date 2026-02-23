@@ -27,6 +27,26 @@ DEFAULT_ADVISORY_FEEDS = {
         label="CERT-FR",
         url="https://www.cert.ssi.gouv.fr/avis/",
     ),
+    "ubuntu_usn": AdvisoryFeed(
+        key="ubuntu_usn",
+        label="Ubuntu Security Notices",
+        url="https://ubuntu.com/security/notices",
+    ),
+    "suse": AdvisoryFeed(
+        key="suse",
+        label="SUSE Security Advisories",
+        url="https://www.suse.com/support/update/",
+    ),
+    "oracle_cpu": AdvisoryFeed(
+        key="oracle_cpu",
+        label="Oracle Critical Patch Update",
+        url="https://www.oracle.com/security-alerts/",
+    ),
+    "cisco": AdvisoryFeed(
+        key="cisco",
+        label="Cisco Security Advisories",
+        url="https://sec.cloudapps.cisco.com/security/center/publicationListing.x",
+    ),
     "bsi": AdvisoryFeed(
         key="bsi",
         label="BSI/CERT-Bund",

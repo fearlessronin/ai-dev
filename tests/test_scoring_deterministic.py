@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from cve_agent.analyzer import analyze_candidate
-from cve_agent.correlation_v2 import apply_phase3_correlation
+from cve_agent.evidence_correlation import apply_evidence_correlation
 from cve_agent.models import AnalysisResult, CVEItem
 from cve_agent.reporter import Reporter
 
@@ -43,7 +43,7 @@ class DeterministicScoringTests(unittest.TestCase):
             packages=["agent-sdk"],
         )
 
-        result = apply_phase3_correlation(
+        result = apply_evidence_correlation(
             analysis,
             kev_entry={"cveID": "CVE-TEST-E1"},
             epss_entry={"epss_score": 0.8},
@@ -71,7 +71,7 @@ class DeterministicScoringTests(unittest.TestCase):
             openvex_status="not_affected",
         )
 
-        result = apply_phase3_correlation(
+        result = apply_evidence_correlation(
             analysis,
             kev_entry=None,
             epss_entry={"epss_score": 0.2},
@@ -86,7 +86,7 @@ class DeterministicScoringTests(unittest.TestCase):
         self.assertIn("OpenVEX indicates not_affected", joined)
         self.assertEqual(result.evidence_score, 0.0)
 
-    def test_change_type_classification_is_deterministic(self) -> None:
+    def test_change_classification_is_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             out = Path(td)
             (out / "findings_latest.json").write_text(

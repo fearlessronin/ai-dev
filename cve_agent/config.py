@@ -6,7 +6,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .inventory import load_inventory_targets
+from .inventory import load_inventory_context
 
 
 @dataclass(frozen=True)
@@ -28,6 +28,7 @@ class Settings:
     regional_rss_urls: list[str]
     jvn_api_template: str
     asset_inventory_path: str | None
+    asset_inventory_context: dict
 
 
 def _csv_env(name: str) -> list[str]:
@@ -62,7 +63,8 @@ def load_settings() -> Settings:
     ]
 
     inventory_path = os.getenv("ASSET_INVENTORY_PATH") or None
-    inventory_targets = load_inventory_targets(inventory_path)
+    inventory_context = load_inventory_context(inventory_path)
+    inventory_targets = inventory_context.get("targets", {"packages": [], "ecosystems": [], "cpes": []})
 
     return Settings(
         nvd_api_key=os.getenv("NVD_API_KEY") or None,
@@ -85,4 +87,5 @@ def load_settings() -> Settings:
             "https://jvndb.jvn.jp/en/myjvn?method=getVulnOverviewList&cveId={cve_id}",
         ),
         asset_inventory_path=inventory_path,
+        asset_inventory_context=inventory_context,
     )

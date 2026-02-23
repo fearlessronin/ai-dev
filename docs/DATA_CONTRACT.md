@@ -36,4 +36,5 @@ Examples of corroboration/patch context fields now emitted:
 - `source_corroboration_sources`, `source_family_presence`
 - `regional_escalation_badges`
 - `asset_mapping_hits`, `asset_mapping_score`, `asset_mapping_summary`
+- `asset_priority_boost`, `asset_owners`, `asset_business_services`, `asset_routing_summary`
 - `patch_availability_matrix`, `patch_availability_summary`

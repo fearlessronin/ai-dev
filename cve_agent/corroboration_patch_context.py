@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from typing import Any
 
-VENDOR_SOURCES = {"msrc", "red hat security data api", "debian security tracker"}
+VENDOR_SOURCES = {
+    "msrc",
+    "red hat security data api",
+    "debian security tracker",
+    "ubuntu security notices",
+    "suse security advisories",
+    "oracle critical patch update",
+    "cisco security advisories",
+}
 
 
 def _norm(value: str) -> str:
@@ -193,6 +201,141 @@ def _asset_mapping_hits(
     return hits
 
 
+def _asset_risk_weight(asset: dict[str, Any]) -> float:
+    criticality_map = {"low": 0.05, "medium": 0.12, "high": 0.22, "critical": 0.32}
+    environment_map = {"dev": 0.03, "test": 0.04, "staging": 0.06, "stage": 0.06, "prod": 0.12, "production": 0.12}
+    criticality = _norm(str(asset.get("criticality") or ""))
+    environment = _norm(str(asset.get("environment") or ""))
+    weight = criticality_map.get(criticality, 0.0) + environment_map.get(environment, 0.0)
+    if bool(asset.get("internet_exposed")):
+        weight += 0.12
+    if str(asset.get("business_service") or "").strip():
+        weight += 0.03
+    return round(min(0.45, weight), 2)
+
+
+def _inventory_asset_matches(
+    analysis: Any, inventory_context: dict[str, Any] | None
+) -> tuple[list[dict[str, Any]], float, list[str], list[str]]:
+    if not isinstance(inventory_context, dict):
+        return [], 0.0, [], []
+    assets = inventory_context.get("assets")
+    if not isinstance(assets, list):
+        return [], 0.0, [], []
+
+    packages = [
+        str(x)
+        for x in (getattr(analysis, "packages", []) + getattr(analysis, "affected_products", []))
+        if str(x).strip()
+    ]
+    ecosystems = [str(x) for x in getattr(analysis, "ecosystems", []) if str(x).strip()]
+    cpes = [str(x) for x in getattr(analysis, "cpe_uris", []) if str(x).strip()]
+
+    hits: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    owners: set[str] = set()
+    services: set[str] = set()
+    weights: list[float] = []
+
+    for asset in assets:
+        if not isinstance(asset, dict):
+            continue
+        asset_id = str(asset.get("asset_id") or "").strip() or "asset"
+        owner = str(asset.get("owner") or "").strip()
+        service = str(asset.get("business_service") or "").strip()
+        if owner:
+            owners.add(owner)
+        if service:
+            services.add(service)
+        weight = _asset_risk_weight(asset)
+
+        for target in [str(x) for x in asset.get("packages", []) if str(x).strip()]:
+            t = _norm(target)
+            for value in packages:
+                v = _norm(value)
+                if t and (t in v or v in t):
+                    key = (asset_id, "package", target, value)
+                    if key in seen:
+                        continue
+                    hits.append(
+                        {
+                            "match_type": "package",
+                            "target": target,
+                            "matched_value": value,
+                            "asset_id": asset_id,
+                            "owner": owner,
+                            "criticality": str(asset.get("criticality") or ""),
+                            "environment": str(asset.get("environment") or ""),
+                            "business_service": service,
+                            "internet_exposed": bool(asset.get("internet_exposed")),
+                            "asset_weight": weight,
+                        }
+                    )
+                    seen.add(key)
+                    if weight:
+                        weights.append(weight)
+
+        for target in [str(x) for x in asset.get("ecosystems", []) if str(x).strip()]:
+            t = _norm(target)
+            for value in ecosystems:
+                if t and t == _norm(value):
+                    key = (asset_id, "ecosystem", target, value)
+                    if key in seen:
+                        continue
+                    hits.append(
+                        {
+                            "match_type": "ecosystem",
+                            "target": target,
+                            "matched_value": value,
+                            "asset_id": asset_id,
+                            "owner": owner,
+                            "criticality": str(asset.get("criticality") or ""),
+                            "environment": str(asset.get("environment") or ""),
+                            "business_service": service,
+                            "internet_exposed": bool(asset.get("internet_exposed")),
+                            "asset_weight": weight,
+                        }
+                    )
+                    seen.add(key)
+                    if weight:
+                        weights.append(weight)
+
+        for target in [str(x) for x in asset.get("cpes", []) if str(x).strip()]:
+            t = _norm(target)
+            for value in cpes:
+                v = _norm(value)
+                if t and (v.startswith(t) or t in v):
+                    key = (asset_id, "cpe", target, value)
+                    if key in seen:
+                        continue
+                    hits.append(
+                        {
+                            "match_type": "cpe",
+                            "target": target,
+                            "matched_value": value,
+                            "asset_id": asset_id,
+                            "owner": owner,
+                            "criticality": str(asset.get("criticality") or ""),
+                            "environment": str(asset.get("environment") or ""),
+                            "business_service": service,
+                            "internet_exposed": bool(asset.get("internet_exposed")),
+                            "asset_weight": weight,
+                        }
+                    )
+                    seen.add(key)
+                    if weight:
+                        weights.append(weight)
+
+    unique_weights = sorted(set(weights), reverse=True)
+    weighted_bonus = round(min(0.6, sum(unique_weights[:3])), 2)
+    return hits, weighted_bonus, sorted(owners), sorted(services)
+
+
+def _asset_hit_summary(hit: dict[str, Any]) -> str:
+    asset_prefix = f"{hit.get('asset_id')}:" if hit.get("asset_id") else ""
+    return f"{hit['match_type']}:{asset_prefix}{hit['target']}->{hit['matched_value']}"
+
+
 def _patch_matrix(
     analysis: Any,
     cveorg_entry: dict[str, Any] | None,
@@ -260,7 +403,7 @@ def _patch_matrix_summary(matrix: dict[str, dict[str, Any]]) -> str:
     return " | ".join(parts)
 
 
-def apply_phase5_features(
+def apply_corroboration_patch_context(
     analysis: Any,
     *,
     cveorg_entry: dict[str, Any] | None,
@@ -271,6 +414,7 @@ def apply_phase5_features(
     target_ecosystems: list[str],
     target_packages: list[str],
     target_cpes: list[str],
+    inventory_context: dict[str, Any] | None = None,
 ) -> Any:
     independent = _independent_sources(analysis, cveorg_entry, osv_entry)
     family_flags = _source_family_flags(analysis, cveorg_entry, osv_entry)
@@ -293,8 +437,21 @@ def apply_phase5_features(
         confidence_label = "low"
 
     badges = _regional_escalation_badges(list(getattr(analysis, "regional_sources", [])))
-    asset_hits = _asset_mapping_hits(analysis, target_packages, target_ecosystems, target_cpes)
-    asset_score = round(min(1.0, len(asset_hits) * 0.25), 2)
+    generic_asset_hits = _asset_mapping_hits(analysis, target_packages, target_ecosystems, target_cpes)
+    inventory_hits, weighted_bonus, owners, services = _inventory_asset_matches(analysis, inventory_context)
+    asset_hits = list(generic_asset_hits)
+    seen_asset_hits = {
+        (h.get("match_type"), h.get("target"), h.get("matched_value")) for h in asset_hits if isinstance(h, dict)
+    }
+    for h in inventory_hits:
+        compact = (h.get("match_type"), h.get("target"), h.get("matched_value"))
+        if compact in seen_asset_hits:
+            continue
+        asset_hits.append(h)
+        seen_asset_hits.add(compact)
+    base_asset_score = min(1.0, len(asset_hits) * 0.25)
+    asset_score = round(min(1.0, base_asset_score + weighted_bonus), 2)
+    asset_priority_boost = round(min(0.15, weighted_bonus * 0.35), 2)
     patch_matrix = _patch_matrix(analysis, cveorg_entry, osv_entry, msrc_entry, redhat_entry, debian_entry)
 
     analysis.source_corroboration_count = len(independent)
@@ -309,10 +466,40 @@ def apply_phase5_features(
     analysis.regional_escalation_badges = badges
     analysis.asset_mapping_hits = asset_hits
     analysis.asset_mapping_score = asset_score
-    analysis.asset_mapping_summary = (
-        "; ".join(f"{h['match_type']}:{h['target']}->{h['matched_value']}" for h in asset_hits[:5])
-        or "no configured asset matches"
+    analysis.asset_owners = owners
+    analysis.asset_business_services = services
+    analysis.asset_priority_boost = asset_priority_boost
+    analysis.asset_routing_summary = (
+        "; ".join(
+            x
+            for x in [
+                (f"owners={', '.join(owners[:3])}" if owners else ""),
+                (f"services={', '.join(services[:3])}" if services else ""),
+                (f"priority_boost={asset_priority_boost:.2f}" if asset_priority_boost else ""),
+            ]
+            if x
+        )
+        or "no inventory routing context"
     )
+    analysis.asset_mapping_summary = (
+        "; ".join(_asset_hit_summary(h) for h in asset_hits[:5]) or "no configured asset matches"
+    )
+    if asset_priority_boost > 0:
+        analysis.priority_score = round(
+            min(1.0, float(getattr(analysis, "priority_score", 0.0)) + asset_priority_boost), 2
+        )
+        if getattr(analysis, "priority_reason", ""):
+            analysis.priority_reason = (
+                f"{analysis.priority_reason}; inventory_boost={asset_priority_boost:.2f} "
+                f"({analysis.asset_routing_summary})"
+            )
+        else:
+            analysis.priority_reason = f"inventory_boost={asset_priority_boost:.2f} ({analysis.asset_routing_summary})"
     analysis.patch_availability_matrix = patch_matrix
     analysis.patch_availability_summary = _patch_matrix_summary(patch_matrix)
     return analysis
+
+
+# Backward-compatible alias for older internal references
+def apply_phase5_features(*args, **kwargs):
+    return apply_corroboration_patch_context(*args, **kwargs)

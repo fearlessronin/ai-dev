@@ -126,6 +126,10 @@ class Reporter:
             "asset_mapping_hits": finding.asset_mapping_hits,
             "asset_mapping_score": finding.asset_mapping_score,
             "asset_mapping_summary": finding.asset_mapping_summary,
+            "asset_priority_boost": finding.asset_priority_boost,
+            "asset_owners": finding.asset_owners,
+            "asset_business_services": finding.asset_business_services,
+            "asset_routing_summary": finding.asset_routing_summary,
             "patch_availability_matrix": finding.patch_availability_matrix,
             "patch_availability_summary": finding.patch_availability_summary,
         }
@@ -154,6 +158,9 @@ class Reporter:
         )
         regional_escalation_badges_line = (
             ", ".join(finding.regional_escalation_badges) if finding.regional_escalation_badges else "N/A"
+        )
+        asset_business_services_line = (
+            ", ".join(finding.asset_business_services) if finding.asset_business_services else "N/A"
         )
 
         content = f"""# {cve.cve_id}
@@ -207,6 +214,10 @@ class Reporter:
 - Fixed versions: {", ".join(finding.fixed_versions) if finding.fixed_versions else "N/A"}
 - Asset mapping score: {finding.asset_mapping_score:.2f}
 - Asset mapping summary: {finding.asset_mapping_summary or "N/A"}
+- Asset owners (inventory): {", ".join(finding.asset_owners) if finding.asset_owners else "N/A"}
+- Business services (inventory): {asset_business_services_line}
+- Inventory priority boost: {finding.asset_priority_boost:.2f}
+- Asset routing summary: {finding.asset_routing_summary or "N/A"}
 
 ## Phase 3 Evidence Correlation
 - Evidence score: {finding.evidence_score:.2f}

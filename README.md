@@ -9,7 +9,7 @@ The application is designed for analysts and researchers who need more than CVSS
 - Ingests CVEs from NVD and enriches them with supporting context from KEV, EPSS, CVE.org, OSV, GHSA, CIRCL, vendor advisories, distro trackers, and selected national/public advisory sources.
 - Scores likely AI-agent / LLM ecosystem relevance and prioritizes findings using deterministic, evidence-weighted scoring and change classification.
 - Correlates findings with MITRE ATLAS and MITRE ATT&CK to provide adversary-technique context for analyst triage.
-- Adds patch and remediation intelligence, including package/fix-version context and a source-by-source patch availability matrix (NVD, CVE.org, OSV, MSRC, Red Hat, Debian).
+- Adds patch and remediation intelligence, including package/fix-version context, vendor/distro corroboration signals (MSRC, Red Hat, Debian, Ubuntu, SUSE, Oracle, Cisco advisories), and a source-by-source patch availability matrix (NVD, CVE.org, OSV, MSRC, Red Hat, Debian).
 - Computes corroboration metrics (confidence label, independent-source count, source-family presence) and highlights regional escalation patterns across national advisories.
 - Supports asset-aware prioritization using `TARGET_*` scope settings and optional inventory-file matching (`ASSET_INVENTORY_PATH` for JSON/CSV inventory inputs).
 - Provides an analyst workflow in the dashboard with filtering, sorting, saved views/presets, triage states/notes, contradiction flags, and detailed remediation context.
@@ -30,6 +30,10 @@ The application is designed for analysts and researchers who need more than CVSS
 | Microsoft Security Response Center (MSRC) | API/HTML source (best-effort) | Vendor confirmation signal for Microsoft-covered CVEs |
 | Red Hat Security Data API | API | Vendor product/package/advisory context and fix-state signals |
 | Debian Security Tracker | API/JSON data source | Distro package/release fixed-version context |
+| Ubuntu Security Notices (USN) | Public web advisory source (HTML parsed) | Vendor/distro corroboration and patch-availability support signals for Ubuntu estates |
+| SUSE Security Advisories | Public web advisory source (HTML parsed) | Vendor/distro corroboration signals for SUSE-managed Linux environments |
+| Oracle Critical Patch Update advisories | Public web advisory source (HTML parsed) | Vendor advisory corroboration for Oracle products and infrastructure components |
+| Cisco Security Advisories | Public web advisory source (HTML parsed) | Vendor advisory corroboration for network/security appliance exposure |
 | CISA ICS advisories | Public web advisory source (HTML parsed) | ICS/OT national advisory corroboration and escalation signals |
 | CERT-FR advisories | Public web advisory source (HTML parsed) | French national advisory corroboration and regional escalation signals |
 | BSI/CERT-Bund advisories | Public web advisory source (HTML parsed) | German national advisory corroboration and regional escalation signals |
@@ -43,7 +47,7 @@ The application is designed for analysts and researchers who need more than CVSS
 
 - Multi-signal prioritization reduces CVSS-only noise.
 - Scope-aware ranking via `TARGET_ECOSYSTEMS`, `TARGET_PACKAGES`, and `TARGET_CPES`.
-- Vendor and distro corroboration (MSRC, Red Hat, Debian) improves patch-context confidence.
+- Vendor and distro corroboration (MSRC, Red Hat, Debian, Ubuntu, SUSE, Oracle, Cisco advisory signals) improves patch-context confidence.
 - Change tracking: `new`, `priority_changed`, `newly_fixed`, `unchanged`.
 - Triage states and notes: `new`, `investigating`, `mitigated`, `accepted_risk`.
 - Contradiction flags help resolve conflicting source data quickly.
@@ -53,6 +57,7 @@ The application is designed for analysts and researchers who need more than CVSS
 - Patch availability matrix summarizes patch/fix presence across NVD, CVE.org, OSV, and vendor/distro advisories.
 - Patch matrix table in the finding detail panel makes source-by-source patch status easier to scan.
 - Asset mapping by package/ecosystem/CPE improves prioritization against your configured environment scope.
+- Richer inventory metadata (`owner`, `criticality`, `environment`, `business_service`, `internet_exposed`) enables weighted asset mapping and bounded priority boosts for operational routing.
 
 ## Benefits For Researchers
 
@@ -114,12 +119,11 @@ Serve polling flags:
 - `--poll-interval-minutes`: override polling cadence at startup (applies to `daemon` and `serve --poll`).
 
 Dashboard Poll Controls (top bar):
-- Reliability alerts: highlights stale/erroring/low-success-rate sources.
-- `Unhealthy sources only` toggle: filters source cards to problem sources.
-
 - Auto-poll toggle: enable/disable background polling without restart.
 - Interval slider: set polling cadence at runtime.
 - `Poll Now` button: trigger an immediate full-source refresh (returns a clear `already running` response if a poll is in progress).
+- Reliability alerts: highlights stale/erroring/low-success-rate sources.
+- `Unhealthy sources only` toggle: filters source cards to problem sources.
 - Source freshness cards: per-source status, last polled time, last success time, duration, records, and last error.
 - Source reliability metrics: per-source success rate, consecutive failures, average latency, stale status, and cooldown metadata.
 - `Poll Source` buttons: manually refresh a single source when a source is stale/erroring without forcing a full poll.
@@ -127,22 +131,22 @@ Dashboard Poll Controls (top bar):
 - Recent Poll Runs: rolling audit trail of recent poll cycles (status, duration, new findings, failed sources, error summary).
 - Poll history filters: `Errors only` and `Source` filters for fast troubleshooting.
 - Retry from history: retry a failed/source poll directly from the `Recent Poll Runs` list.
-- Unhealthy-source filter: focus source cards on stale/erroring/low-reliability feeds.
 - Poll history export: download poll audit history as CSV or JSON.
+
 
 ## Corroboration, Patch Matrix, Asset Mapping, and Saved Views
 
 - `Export CSV` / `Export JSON` buttons: download findings with analyst enrichment fields for sharing and offline analysis.
+- Saved analyst views/presets (stored in browser local storage) support recurring filter/sort combinations such as `High corroboration + in scope` or `Vendor patch watch`.
 
-The dashboard supports saved analyst views/presets (stored in browser local storage) for recurring filter/sort combinations such as `High corroboration + in scope` or `Vendor patch watch`.
-
-
-The dashboard now surfaces advanced correlation context per finding:
+The dashboard surfaces advanced corroboration and remediation context per finding:
 - Source corroboration score + confidence label (`low` / `medium` / `high`)
 - Independent corroborating source count and source-family presence (core/open/vendor/national/telemetry)
 - Regional escalation badges (multi-national and transatlantic combinations)
-- Asset mapping hits against `TARGET_PACKAGES`, `TARGET_ECOSYSTEMS`, and `TARGET_CPES`
+- Asset mapping hits against `TARGET_PACKAGES`, `TARGET_ECOSYSTEMS`, `TARGET_CPES`, plus optional inventory metadata routing context
+- Bounded inventory-based priority boost (when findings match high-value production assets in `ASSET_INVENTORY_PATH`)
 - Patch availability matrix summary across `NVD`, `CVE.org`, `OSV`, `MSRC`, `Red Hat`, and `Debian`
+
 
 ## No-API Demo Mode
 
@@ -170,11 +174,23 @@ Remove-Item Env:REPROCESS_SEEN
 ```
 
 This re-evaluates previously seen CVEs and rewrites findings/reports with the latest enrichment logic.
+
 ## Asset Inventory Examples and Validation
 
 Use the included examples to bootstrap inventory-driven matching:
 - `examples/assets.inventory.json`
 - `examples/assets.inventory.csv`
+
+Supported inventory metadata fields (JSON assets or CSV columns):
+- `asset_id`
+- `owner`
+- `criticality` (`low` / `medium` / `high` / `critical`)
+- `environment` (`dev`, `staging`, `prod`, etc.)
+- `business_service`
+- `internet_exposed` (`true` / `false`)
+- `tags`
+
+These fields are used to improve asset routing context and apply a bounded inventory-based priority boost when a finding matches high-value production assets.
 
 Validate inventory format before enabling `ASSET_INVENTORY_PATH`:
 
@@ -211,20 +227,21 @@ pre-commit run --all-files
 
 ## Polling API
 
-Poll history export endpoints:
-- `GET /api/poll/history.csv`
-- `GET /api/poll/history.json`
-
 Findings export endpoints:
 - `GET /api/export.csv` (includes corroboration/asset/patch context columns)
 - `GET /api/export.json`
 
+Poll history export endpoints:
+- `GET /api/poll/history.csv`
+- `GET /api/poll/history.json`
 
+Runtime polling endpoints:
 - `GET /api/poll/status`: current polling state + per-source freshness telemetry
 - `POST /api/poll/config`: update runtime polling config (`enabled`, `interval_minutes`)
 - `POST /api/poll/run`: trigger an immediate manual polling cycle
 - `POST /api/poll/run-source`: trigger a single-source polling cycle (`source`)
 - `POST /api/poll/retry-history`: retry a poll based on a history entry (`history_index`)
+
 
 ## Configuration
 
@@ -240,7 +257,7 @@ Findings export endpoints:
 - `TARGET_ECOSYSTEMS`: comma-separated ecosystem scope
 - `TARGET_PACKAGES`: comma-separated package scope
 - `TARGET_CPES`: comma-separated CPE fragment scope
-- `ASSET_INVENTORY_PATH`: optional JSON/CSV inventory file to augment `TARGET_*` matching inputs
+- `ASSET_INVENTORY_PATH`: optional JSON/CSV inventory file to augment `TARGET_*` matching inputs and provide asset metadata for routing/priority boosts
 - `REPROCESS_SEEN`: reprocess seen CVEs for change tracking (`false` default)
 - `CSAF_FEED_URLS`: comma-separated CSAF/global feed URLs
 - `REGIONAL_RSS_URLS`: comma-separated RSS feed URLs
@@ -274,6 +291,4 @@ When adding, removing, or changing a data source, update this README section:
 - `Data Feeds Included`
 - any related config variables in `Configuration`
 - relevant analyst/researcher impact notes
-
-
 

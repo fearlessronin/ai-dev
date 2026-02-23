@@ -9,10 +9,10 @@ from typing import Any
 
 from .analyzer import analyze_candidate
 from .config import Settings
-from .correlation_v2 import apply_phase3_correlation
 from .correlator import MitreCorrelator
+from .corroboration_patch_context import apply_corroboration_patch_context
 from .enrichment import apply_enrichment
-from .phase5 import apply_phase5_features
+from .evidence_correlation import apply_evidence_correlation
 from .reporter import Reporter
 from .sources.attack_feed import AttackFeedClient
 from .sources.circl import CIRCLClient
@@ -45,6 +45,10 @@ SOURCE_NAMES = [
     "cisa_ics",
     "certfr",
     "bsi",
+    "ubuntu_usn",
+    "suse",
+    "oracle_cpu",
+    "cisco",
     "openvex",
     "attack_feed",
 ]
@@ -112,6 +116,18 @@ class CVEWatcher:
             "certfr", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "certfr")
         )
         bsi_map = self._call_source("bsi", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "bsi"))
+        ubuntu_usn_map = self._call_source(
+            "ubuntu_usn", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "ubuntu_usn")
+        )
+        suse_map = self._call_source(
+            "suse", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "suse")
+        )
+        oracle_cpu_map = self._call_source(
+            "oracle_cpu", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "oracle_cpu")
+        )
+        cisco_map = self._call_source(
+            "cisco", lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "cisco")
+        )
         openvex_map = self._call_source("openvex", lambda: load_openvex_map(self.settings.openvex_path))
         attack_feed_meta = self._call_source("attack_feed", self.attack_feed_client.fetch_metadata) or {}
 
@@ -128,6 +144,10 @@ class CVEWatcher:
             regional_sources.extend(cisa_ics_map.get(cve_id, []))
             regional_sources.extend(certfr_map.get(cve_id, []))
             regional_sources.extend(bsi_map.get(cve_id, []))
+            regional_sources.extend(ubuntu_usn_map.get(cve_id, []))
+            regional_sources.extend(suse_map.get(cve_id, []))
+            regional_sources.extend(oracle_cpu_map.get(cve_id, []))
+            regional_sources.extend(cisco_map.get(cve_id, []))
             openvex_status = openvex_map.get(cve_id)
 
             vendor_sources, vendor_packages, vendor_fixed_versions = self._vendor_context_for_cve(
@@ -161,7 +181,7 @@ class CVEWatcher:
                 cveorg_entry=None,
                 osv_entry=None,
             )
-            analysis = apply_phase3_correlation(
+            analysis = apply_evidence_correlation(
                 analysis,
                 kev_entry=kev_entry,
                 epss_entry=epss_entry,
@@ -170,8 +190,9 @@ class CVEWatcher:
                 target_ecosystems=self.settings.target_ecosystems,
                 target_packages=self.settings.target_packages,
                 target_cpes=self.settings.target_cpes,
+                inventory_context=self.settings.asset_inventory_context,
             )
-            analysis = apply_phase5_features(
+            analysis = apply_corroboration_patch_context(
                 analysis,
                 cveorg_entry=cveorg_entry,
                 osv_entry=osv_entry,
@@ -221,6 +242,10 @@ class CVEWatcher:
             "cisa_ics",
             "certfr",
             "bsi",
+            "ubuntu_usn",
+            "suse",
+            "oracle_cpu",
+            "cisco",
         }
         candidate_ids = list(self._last_candidate_ids)
         if source in candidate_sources and not candidate_ids:
@@ -241,6 +266,10 @@ class CVEWatcher:
             "cisa_ics": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "cisa_ics"),
             "certfr": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "certfr"),
             "bsi": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "bsi"),
+            "ubuntu_usn": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "ubuntu_usn"),
+            "suse": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "suse"),
+            "oracle_cpu": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "oracle_cpu"),
+            "cisco": lambda: self.public_advisory_client.fetch_feed_signals(candidate_ids, "cisco"),
             "openvex": lambda: load_openvex_map(self.settings.openvex_path),
             "attack_feed": self.attack_feed_client.fetch_metadata,
         }

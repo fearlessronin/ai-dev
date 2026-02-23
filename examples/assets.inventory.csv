@@ -1,4 +1,4 @@
-package,ecosystem,cpe
-acme-agent,PyPI,cpe:2.3:a:acme:agent-platform
-langchain,PyPI,
-open-webui,PyPI,cpe:2.3:a:open-webui:open-webui
+asset_id,package,ecosystem,cpe,owner,criticality,environment,business_service,internet_exposed,tags
+prod-ai-api-01,acme-agent,PyPI,cpe:2.3:a:acme:agent-platform,platform-sec,critical,prod,ai-assistant-api,true,"customer-facing;genai"
+dev-rag-worker-02,langchain,PyPI,,ml-platform,medium,dev,rag-indexing,false,internal
+open-webui-prod,open-webui,PyPI,cpe:2.3:a:open-webui:open-webui,platform-sec,high,prod,operator-console,false,ops

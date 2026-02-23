@@ -83,7 +83,7 @@ Use the top-bar polling controls in the dashboard to:
 - `TARGET_ECOSYSTEMS`: comma-separated ecosystem scope
 - `TARGET_PACKAGES`: comma-separated package scope
 - `TARGET_CPES`: comma-separated CPE fragment scope
-- `ASSET_INVENTORY_PATH`: optional JSON/CSV asset inventory file (merged into `TARGET_*`)
+- `ASSET_INVENTORY_PATH`: optional JSON/CSV asset inventory file (merged into `TARGET_*`) with optional metadata fields (`owner`, `criticality`, `environment`, `business_service`, `internet_exposed`) used for routing context and bounded priority boosts
 - `REPROCESS_SEEN`: reprocess seen CVEs for change tracking
 - `CSAF_FEED_URLS`: comma-separated CSAF/global feed URLs
 - `REGIONAL_RSS_URLS`: comma-separated RSS feed URLs
@@ -97,10 +97,17 @@ The app currently enriches with:
 - MSRC (Microsoft Security Response Center)
 - Red Hat Security Data API
 - Debian Security Tracker
+- Ubuntu Security Notices (USN), SUSE Security Advisories, Oracle CPU advisories, Cisco Security Advisories (public advisory HTML parsing for vendor corroboration)
 - ATT&CK feed metadata, OpenVEX, regional/national RSS/CSAF/JVN sources
 - Public advisory HTML sources: CISA ICS, CERT-FR, BSI/CERT-Bund (regional escalation signals)
 
 ## Polling API Endpoints
+
+Export endpoints:
+- `GET /api/export.csv`
+- `GET /api/export.json`
+- `GET /api/poll/history.csv`
+- `GET /api/poll/history.json`
 
 - `GET /api/poll/status`
 - `POST /api/poll/config`

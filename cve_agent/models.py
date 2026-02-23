@@ -99,6 +99,10 @@ class AnalysisResult:
     asset_mapping_hits: list[dict[str, str]] = field(default_factory=list)
     asset_mapping_score: float = 0.0
     asset_mapping_summary: str = ""
+    asset_priority_boost: float = 0.0
+    asset_owners: list[str] = field(default_factory=list)
+    asset_business_services: list[str] = field(default_factory=list)
+    asset_routing_summary: str = ""
 
     patch_availability_matrix: dict[str, dict[str, Any]] = field(default_factory=dict)
     patch_availability_summary: str = ""

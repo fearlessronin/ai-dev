@@ -42,9 +42,9 @@ const el = {
   detailContent: document.getElementById("detail-content"),
   vendorPanel: document.getElementById("vendor-panel"),
   vendorSummary: document.getElementById("vendor-summary"),
-  phase5Panel: document.getElementById("phase5-panel"),
-  phase5Summary: document.getElementById("phase5-summary"),
-  phase5PatchMatrix: document.getElementById("phase5-patch-matrix"),
+  corroborationPanel: document.getElementById("corroboration-panel"),
+  corroborationSummary: document.getElementById("corroboration-summary"),
+  corroborationPatchMatrix: document.getElementById("corroboration-patch-matrix"),
   triageEditState: document.getElementById("triage-edit-state"),
   triageEditNote: document.getElementById("triage-edit-note"),
   triageSave: document.getElementById("triage-save"),
@@ -213,6 +213,16 @@ function normalizedSources(f) {
   return new Set((f.regional_sources || []).map((s) => String(s).toLowerCase()));
 }
 
+const VENDOR_SOURCE_LABELS = new Set([
+  "msrc",
+  "red hat security data api",
+  "debian security tracker",
+  "ubuntu security notices",
+  "suse security advisories",
+  "oracle critical patch update",
+  "cisco security advisories",
+]);
+
 function hasMsrcSignal(f) {
   const src = normalizedSources(f);
   return src.has("msrc");
@@ -228,8 +238,29 @@ function hasDebianSignal(f) {
   return src.has("debian security tracker");
 }
 
+function hasCiscoSignal(f) {
+  const src = normalizedSources(f);
+  return src.has("cisco security advisories");
+}
+
+function hasOracleSignal(f) {
+  const src = normalizedSources(f);
+  return src.has("oracle critical patch update");
+}
+
+function hasSuseSignal(f) {
+  const src = normalizedSources(f);
+  return src.has("suse security advisories");
+}
+
+function hasUbuntuSignal(f) {
+  const src = normalizedSources(f);
+  return src.has("ubuntu security notices");
+}
+
 function hasVendorCorroboration(f) {
-  return hasMsrcSignal(f) || hasRedHatSignal(f) || hasDebianSignal(f);
+  const src = normalizedSources(f);
+  return Array.from(VENDOR_SOURCE_LABELS).some((s) => src.has(s));
 }
 
 function hasDistroContext(f) {
@@ -242,11 +273,15 @@ function vendorCorroborationSummary(f) {
   sourceLines.push(`MSRC: ${hasMsrcSignal(f) ? "yes" : "no"}`);
   sourceLines.push(`Red Hat: ${hasRedHatSignal(f) ? "yes" : "no"}`);
   sourceLines.push(`Debian: ${hasDebianSignal(f) ? "yes" : "no"}`);
+  sourceLines.push(`Ubuntu: ${hasUbuntuSignal(f) ? "yes" : "no"}`);
+  sourceLines.push(`SUSE: ${hasSuseSignal(f) ? "yes" : "no"}`);
+  sourceLines.push(`Oracle: ${hasOracleSignal(f) ? "yes" : "no"}`);
+  sourceLines.push(`Cisco: ${hasCiscoSignal(f) ? "yes" : "no"}`);
   lines.push(sourceLines.join(" | "));
 
   const vendorSources = (f.regional_sources || []).filter((s) => {
     const x = String(s).toLowerCase();
-    return x === "msrc" || x === "red hat security data api" || x === "debian security tracker";
+    return VENDOR_SOURCE_LABELS.has(x);
   });
   lines.push(`Matched sources: ${vendorSources.length ? vendorSources.join(", ") : "none"}`);
   lines.push(`Packages (preview): ${textPreview(f.packages)}`);
@@ -262,8 +297,8 @@ function resetDetailPanel(message) {
   if (el.vendorSummary) {
     el.vendorSummary.textContent = "Select a finding to view vendor and distro corroboration details.";
   }
-  if (el.phase5Summary) {
-    el.phase5Summary.textContent = "Select a finding to view source corroboration, regional escalation, asset matches, and patch availability.";
+  if (el.corroborationSummary) {
+    el.corroborationSummary.textContent = "Select a finding to view source corroboration, regional escalation, asset matches, and patch availability.";
   }
   el.detailContent.textContent = message;
 }
@@ -271,9 +306,9 @@ function resetDetailPanel(message) {
 
 
 function renderPatchMatrix(matrix) {
-  if (!el.phase5PatchMatrix) return;
+  if (!el.corroborationPatchMatrix) return;
   if (!matrix || typeof matrix !== "object") {
-    el.phase5PatchMatrix.innerHTML = "";
+    el.corroborationPatchMatrix.innerHTML = "";
     return;
   }
   const order = ["nvd", "cveorg", "osv", "msrc", "redhat", "debian"];
@@ -283,7 +318,7 @@ function renderPatchMatrix(matrix) {
     const present = row.present ? "yes" : "no";
     return `<tr><td>${k.toUpperCase()}</td><td>${present}</td><td>${fix}</td><td>${row.evidence || ""}</td></tr>`;
   });
-  el.phase5PatchMatrix.innerHTML = rows.length
+  el.corroborationPatchMatrix.innerHTML = rows.length
     ? `<table class="patch-matrix"><thead><tr><th>Source</th><th>Present</th><th>Fix</th><th>Evidence</th></tr></thead><tbody>${rows.join("")}</tbody></table>`
     : "";
 }
@@ -309,7 +344,8 @@ function corroborationPatchContextText(f) {
     `Independent sources: ${Number(f.source_corroboration_count || 0)}`,
     `Families: core=${families.core ? "yes" : "no"} | open=${families.open ? "yes" : "no"} | vendor=${families.vendor ? "yes" : "no"} | national=${families.national ? "yes" : "no"} | telemetry=${families.telemetry ? "yes" : "no"}`,
     `Regional escalation badges: ${badges}`,
-    `Asset mapping score: ${fmt(f.asset_mapping_score)}`,
+    `Asset mapping score: ${fmt(f.asset_mapping_score)}${f.asset_priority_boost ? ` | inventory boost ${fmt(f.asset_priority_boost)}` : ""}`,
+    `Asset routing: ${f.asset_routing_summary || "none"}`,
     `Asset matches:`,
     assetHits,
     `Patch matrix: ${f.patch_availability_summary || patchMatrixPreview(f.patch_availability_matrix) || "none"}`,
@@ -550,8 +586,12 @@ function renderCards() {
         ${hasMsrcSignal(f) ? `<span class="badge badge-vendor">MSRC</span>` : ""}
         ${hasRedHatSignal(f) ? `<span class="badge badge-vendor">Red Hat</span>` : ""}
         ${hasDebianSignal(f) ? `<span class="badge badge-distro">Debian</span>` : ""}
-        <span class="badge badge-phase5">corr ${fmt(f.source_corroboration_score)}</span>
-        ${(f.asset_mapping_hits || []).length ? `<span class="badge badge-phase5">asset ${(f.asset_mapping_hits || []).length}</span>` : ""}
+        ${hasUbuntuSignal(f) ? `<span class="badge badge-distro">Ubuntu</span>` : ""}
+        ${hasSuseSignal(f) ? `<span class="badge badge-distro">SUSE</span>` : ""}
+        ${hasOracleSignal(f) ? `<span class="badge badge-vendor">Oracle</span>` : ""}
+        ${hasCiscoSignal(f) ? `<span class="badge badge-vendor">Cisco</span>` : ""}
+        <span class="badge badge-corroboration">corr ${fmt(f.source_corroboration_score)}</span>
+        ${(f.asset_mapping_hits || []).length ? `<span class="badge badge-corroboration">asset ${(f.asset_mapping_hits || []).length}</span>` : ""}
         ${(f.regional_escalation_badges || []).length ? `<span class="badge badge-alert">escalation ${(f.regional_escalation_badges || []).length}</span>` : ""}
       </div>
       <p class="tech-line">Ecosystems: ${textPreview(f.ecosystems)}</p>
@@ -638,8 +678,8 @@ async function selectFinding(f) {
   if (el.vendorSummary) {
     el.vendorSummary.textContent = vendorCorroborationSummary(f);
   }
-  if (el.phase5Summary) {
-    el.phase5Summary.textContent = corroborationPatchContextText(f);
+  if (el.corroborationSummary) {
+    el.corroborationSummary.textContent = corroborationPatchContextText(f);
   }
   renderPatchMatrix(f.patch_availability_matrix);
   el.detailContent.textContent = "Loading report...";

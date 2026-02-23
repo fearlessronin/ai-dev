@@ -10,7 +10,7 @@ It combines multiple signals in one place:
 - CVE.org CNA + Vulnrichment (SSVC-style) data
 - OSV and GHSA package/fix context
 - CIRCL sightings and optional OpenVEX override status
-- Vendor/distro context from MSRC, Red Hat Security Data API, and Debian Security Tracker
+- Vendor/distro context from MSRC, Red Hat Security Data API, Debian Security Tracker, and public advisory corroboration for Ubuntu/SUSE/Oracle/Cisco advisories
 - MITRE ATLAS and ATT&CK mapping
 - Regional/national feed matching (CSAF/RSS/JVN) plus public advisory parsing for CISA ICS, CERT-FR, and BSI/CERT-Bund
 
@@ -37,7 +37,7 @@ It combines multiple signals in one place:
 - `change_type` (`new`, `priority_changed`, `newly_fixed`, `unchanged`)
 - evidence rationale and contradictions
 - recommended remediation and fixed versions
-- vendor/distro package/fix context when present (MSRC/Red Hat/Debian corroboration)
+- vendor/distro package/fix context when present (MSRC/Red Hat/Debian plus advisory corroboration from Ubuntu/SUSE/Oracle/Cisco)
 5. Set triage state and note:
 - `new`
 - `investigating`
@@ -97,6 +97,8 @@ Recommended workflow add-on:
 ## Asset Inventory Input (Optional)
 
 Provide `ASSET_INVENTORY_PATH` (JSON or CSV) to augment `TARGET_PACKAGES`, `TARGET_ECOSYSTEMS`, and `TARGET_CPES` matching without hardcoding all values in environment variables.
+
+Optional inventory metadata fields (`owner`, `criticality`, `environment`, `business_service`, `internet_exposed`) improve routing context and can increase priority slightly when a finding maps to high-criticality production assets.
 
 
 ## Source Reliability Metrics

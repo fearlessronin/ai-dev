@@ -4,9 +4,26 @@
   "cpes": ["cpe:2.3:a:acme:agent-platform"],
   "assets": [
     {
+      "asset_id": "prod-ai-api-01",
       "package": ["open-webui"],
       "ecosystem": ["PyPI"],
-      "cpe": ["cpe:2.3:a:open-webui:open-webui"]
+      "cpe": ["cpe:2.3:a:open-webui:open-webui"],
+      "owner": "platform-sec",
+      "criticality": "critical",
+      "environment": "prod",
+      "business_service": "ai-assistant-api",
+      "internet_exposed": true,
+      "tags": ["customer-facing", "genai"]
+    },
+    {
+      "asset_id": "dev-rag-worker-02",
+      "package": ["langchain"],
+      "ecosystem": ["PyPI"],
+      "owner": "ml-platform",
+      "criticality": "medium",
+      "environment": "dev",
+      "business_service": "rag-indexing",
+      "internet_exposed": false
     }
   ]
 }
