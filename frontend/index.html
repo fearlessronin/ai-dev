@@ -64,6 +64,80 @@
             </div>
           </div>
         </div>
+
+        <button id="ops-show-btn" class="poll-show-feeds-btn ops-show-btn" type="button" aria-pressed="false">Show Operations</button>
+        <div class="ops-panel">
+          <button id="ops-toggle" class="ops-toggle" type="button" aria-expanded="false">
+            <span>Operations (Exports & Alerts)</span>
+            <span id="ops-toggle-icon" class="poll-sources-toggle__icon">+</span>
+          </button>
+          <div id="ops-body" class="ops-body hidden">
+            <div id="ops-summary" class="ops-summary">Loading operations status...</div>
+            <div class="ops-grid">
+              <section class="ops-card">
+                <h3>Scheduled Exports</h3>
+                <label class="poll-toggle"><input type="checkbox" id="ops-exports-enabled" /> Enable scheduled exports</label>
+                <label>
+                  Frequency
+                  <select id="ops-frequency">
+                    <option value="daily">daily</option>
+                    <option value="hourly">hourly</option>
+                  </select>
+                </label>
+                <div class="ops-row">
+                  <label>
+                    Hour (UTC)
+                    <input id="ops-hour" type="number" min="0" max="23" value="1" />
+                  </label>
+                  <label>
+                    Minute (UTC)
+                    <input id="ops-minute" type="number" min="0" max="59" value="0" />
+                  </label>
+                </div>
+                <div class="ops-checks">
+                  <label><input type="checkbox" id="ops-format-json" checked /> JSON</label>
+                  <label><input type="checkbox" id="ops-format-csv" checked /> CSV</label>
+                  <label><input type="checkbox" id="ops-dataset-findings" checked /> Findings</label>
+                  <label><input type="checkbox" id="ops-dataset-history" checked /> Poll History</label>
+                </div>
+                <div class="ops-actions">
+                  <button id="ops-save" type="button">Apply Ops Config</button>
+                  <button id="ops-run-export" type="button">Run Export Now</button>
+                </div>
+              </section>
+              <section class="ops-card">
+                <h3>Alerts (Config)</h3>
+                <label class="poll-toggle"><input type="checkbox" id="ops-notify-enabled" /> Enable alerts config</label>
+                <label>
+                  Webhook URL (stored locally)
+                  <input id="ops-webhook-url" type="text" placeholder="https://..." />
+                </label>
+                <div class="ops-checks">
+                  <label><input type="checkbox" id="ops-rule-high-corrob" /> High corroboration + in scope</label>
+                  <label><input type="checkbox" id="ops-rule-newly-fixed" /> Newly fixed + in scope</label>
+                  <label><input type="checkbox" id="ops-rule-source-unhealthy" /> Source unhealthy</label>
+                </div>
+                <div class="ops-row">
+                  <label>
+                    Corroboration Min
+                    <input id="ops-corrob-min" type="number" min="0" max="20" value="3" />
+                  </label>
+                  <label>
+                    Source Fail Min
+                    <input id="ops-fail-min" type="number" min="0" max="20" value="2" />
+                  </label>
+                </div>
+                <div class="ops-note">Alert delivery engine is config-ready in this build; scheduler and exports are active now.</div>
+              </section>
+            </div>
+            <div class="ops-history-wrap">
+              <h3>Export Job History</h3>
+              <div id="ops-history" class="poll-history"></div>
+            </div>
+          </div>
+        </div>
+
+</div>
       </section>
 
       <main class="layout">

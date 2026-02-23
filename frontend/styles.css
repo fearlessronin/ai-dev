@@ -674,3 +674,137 @@ button {
 .poll-show-feeds-btn:hover {
   border-color: var(--teal);
 }
+
+
+.ops-panel {
+  margin-top: 0.75rem;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.02);
+  padding: 0.35rem 0.55rem 0.55rem;
+}
+
+.ops-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  padding: 0.1rem 0;
+}
+
+.ops-body {
+  margin-top: 0.5rem;
+}
+
+.ops-summary {
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  font-family: "IBM Plex Mono", monospace;
+  margin-bottom: 0.6rem;
+}
+
+.ops-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 0.75rem;
+}
+
+.ops-card {
+  border: 1px solid #dbcdb8;
+  border-radius: 10px;
+  background: #fffdf7;
+  padding: 0.6rem;
+}
+
+.ops-card h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.9rem;
+}
+
+.ops-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.ops-checks {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+}
+
+.ops-checks label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.ops-checks input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.ops-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.55rem;
+}
+
+#ops-save {
+  background: var(--teal);
+  color: white;
+  border: none;
+}
+
+#ops-run-export {
+  background: var(--amber);
+  color: white;
+  border: none;
+}
+
+.ops-note {
+  margin-top: 0.45rem;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.ops-history-wrap {
+  margin-top: 0.7rem;
+  border-top: 1px solid #e5d8c4;
+  padding-top: 0.6rem;
+}
+
+.ops-history-wrap h3 {
+  margin: 0 0 0.4rem;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 1100px) {
+  .ops-grid {
+    grid-template-columns: 1fr;
+  }
+  .ops-actions {
+    grid-template-columns: 1fr;
+  }
+  .ops-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.ops-show-btn {
+  margin-top: 0.65rem;
+}
+
+.ops-show-btn[aria-pressed="false"] + .ops-panel {
+  margin-top: 0.5rem;
+}

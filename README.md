@@ -14,6 +14,8 @@ The application is designed for analysts and researchers who need more than CVSS
 - Supports asset-aware prioritization using `TARGET_*` scope settings and optional inventory-file matching (`ASSET_INVENTORY_PATH` for JSON/CSV inventory inputs).
 - Provides an analyst workflow in the dashboard with filtering, sorting, saved views/presets, triage states/notes, contradiction flags, and detailed remediation context.
 - Provides runtime polling operations: auto-poll controls, interval tuning, per-source manual polling, source freshness/reliability telemetry, cooldowns, poll history, retry, and audit exports.
+- Adds a configurable operations scheduler for scheduled exports (findings and poll history) with runtime config/status APIs and export job history.
+- Supports configurable notification rules/channels persistence (webhook-first config model) as groundwork for alert delivery automation.
 - Exposes findings and operations data through the dashboard and file/API outputs (`JSONL`, markdown reports, CSV/JSON findings exports, and poll history CSV/JSON exports).
 
 ## Data Feeds Included
@@ -185,6 +187,12 @@ Serve polling flags:
 - `--poll`: enable background polling while the dashboard is running.
 - `--poll-interval-minutes`: override polling cadence at startup (applies to `daemon` and `serve --poll`).
 
+
+Operations scheduler (configurable):
+- Config is persisted in `output/ops_config.json` and runtime/job status in `output/ops_ops_status.json`.
+- Scheduled exports can write findings and poll history to timestamped folders under `output/exports/`.
+- Notifications config (rules/channels) is persisted now; alert delivery engine is the next implementation step.
+
 Dashboard Poll Controls (top bar):
 - Auto-poll toggle: enable/disable background polling without restart.
 - Interval slider: set polling cadence at runtime.
@@ -199,6 +207,14 @@ Dashboard Poll Controls (top bar):
 - Poll history filters: `Errors only` and `Source` filters for fast troubleshooting.
 - Retry from history: retry a failed/source poll directly from the `Recent Poll Runs` list.
 - Poll history export: download poll audit history as CSV or JSON.
+
+Dashboard Operations Controls (top bar):
+- `Show Operations` / `Hide Operations` button: collapses the operations scheduler/alerts panel to keep the top area compact.
+- Scheduled Exports panel: configure runtime export scheduler (`enabled`, `hourly`/`daily`, UTC time, formats, datasets).
+- `Apply Ops Config` button: persists operations config to `output/ops_config.json`.
+- `Run Export Now` button: queues an immediate export job using the scheduler pipeline.
+- Export Job History: recent scheduled/manual export jobs with status, duration, output count, and errors.
+- Alerts (Config) panel: webhook/rule settings are configurable and persisted (delivery engine is config-ready in this build).
 
 
 ## Corroboration, Patch Matrix, Asset Mapping, and Saved Views
@@ -309,6 +325,11 @@ Runtime polling endpoints:
 - `POST /api/poll/run-source`: trigger a single-source polling cycle (`source`)
 - `POST /api/poll/retry-history`: retry a poll based on a history entry (`history_index`)
 
+Operations scheduler endpoints:
+- `GET /api/ops/status`: scheduled export runtime status, config (redacted), and ops job history
+- `POST /api/ops/config`: update notifications/exports ops config (persisted to `output/ops_config.json`)
+- `POST /api/ops/run-export`: queue an immediate scheduled-export job
+
 
 ## Configuration
 
@@ -329,6 +350,7 @@ Runtime polling endpoints:
 - `CSAF_FEED_URLS`: comma-separated CSAF/global feed URLs
 - `REGIONAL_RSS_URLS`: comma-separated RSS feed URLs
 - `JVN_API_TEMPLATE`: JVN request template containing `{cve_id}`
+- Operations scheduler/runtime config is persisted in `output/ops_config.json` (API-managed; no required env vars for first pass)
 
 ## Output
 
@@ -338,6 +360,9 @@ Runtime polling endpoints:
 - `output/triage.json`: triage state/note overrides
 - `output/findings_latest.json`: latest snapshot for change detection
 - `output/poll_status.json`: persisted polling state and per-source freshness snapshot
+- `output/ops_config.json`: persisted operations config (notifications + scheduled exports)
+- `output/ops_ops_status.json`: persisted operations runtime status and export job history
+- `output/exports/<timestamp>/...`: scheduled export artifacts (findings and/or poll history in configured formats)
 
 ## Data Contract
 

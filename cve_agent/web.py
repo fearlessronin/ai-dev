@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 from urllib.parse import unquote
 
 if TYPE_CHECKING:
+    from .ops import OpsController
     from .polling import PollController
 
 DOC_MAP = {
@@ -200,6 +201,7 @@ def serve(
     host: str = "127.0.0.1",
     port: int = 8080,
     poll_controller: PollController | None = None,
+    ops_controller: OpsController | None = None,
 ) -> None:
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:  # noqa: N802
@@ -221,6 +223,8 @@ def serve(
                 return self._send_poll_history_csv()
             if path == "/api/poll/history.json":
                 return self._send_poll_history_json()
+            if path == "/api/ops/status":
+                return self._send_ops_status()
             if path.startswith("/api/report/"):
                 cve_id = path.rsplit("/", 1)[-1]
                 return self._send_report(cve_id)
@@ -244,6 +248,10 @@ def serve(
                 return self._run_poll_source()
             if path == "/api/poll/retry-history":
                 return self._retry_poll_history()
+            if path == "/api/ops/config":
+                return self._update_ops_config()
+            if path == "/api/ops/run-export":
+                return self._run_ops_export_now()
 
             self.send_response(404)
             self.end_headers()
@@ -323,6 +331,26 @@ def serve(
             if poll_controller is None:
                 return self._send_json({"error": "poll controller unavailable"}, status=503)
             return self._send_json(poll_controller.status())
+
+        def _send_ops_status(self) -> None:
+            if ops_controller is None:
+                return self._send_json({"error": "ops controller unavailable"}, status=503)
+            return self._send_json(ops_controller.status())
+
+        def _update_ops_config(self) -> None:
+            if ops_controller is None:
+                return self._send_json({"error": "ops controller unavailable"}, status=503)
+            payload = self._read_json_body()
+            if payload is None:
+                return self._send_json({"error": "invalid JSON body"}, status=400)
+            return self._send_json(ops_controller.update_config(payload))
+
+        def _run_ops_export_now(self) -> None:
+            if ops_controller is None:
+                return self._send_json({"error": "ops controller unavailable"}, status=503)
+            payload = self._read_json_body() or {}
+            origin = str(payload.get("origin", "manual_ui_ops_export")).strip() or "manual_ui_ops_export"
+            return self._send_json(ops_controller.trigger_export_now(origin=origin))
 
         def _update_poll_config(self) -> None:
             if poll_controller is None:

@@ -8,6 +8,7 @@ from pathlib import Path
 from .config import load_settings
 from .demo import seed_demo_dataset
 from .inventory import validate_inventory_file
+from .ops import OpsController
 from .polling import PollController
 from .runner import CVEWatcher
 from .web import serve
@@ -81,6 +82,8 @@ def main() -> None:
             enabled=bool(args.poll),
         )
         poll_controller.start()
+        ops_controller = OpsController(output_dir=settings.output_dir)
+        ops_controller.start()
 
         root_dir = Path(__file__).resolve().parent.parent
         frontend_dir = root_dir / "frontend"
@@ -92,6 +95,7 @@ def main() -> None:
             host=args.host,
             port=args.port,
             poll_controller=poll_controller,
+            ops_controller=ops_controller,
         )
 
 

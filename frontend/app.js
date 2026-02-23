@@ -4,6 +4,7 @@ const state = {
   selectedId: null,
   statFilter: "",
   pollStatus: null,
+  opsStatus: null,
   savedViews: {},
 };
 
@@ -84,6 +85,29 @@ const el = {
   savedViewApply: document.getElementById("saved-view-apply"),
   savedViewSave: document.getElementById("saved-view-save"),
   savedViewDelete: document.getElementById("saved-view-delete"),
+  opsShowBtn: document.getElementById("ops-show-btn"),
+  opsToggle: document.getElementById("ops-toggle"),
+  opsToggleIcon: document.getElementById("ops-toggle-icon"),
+  opsBody: document.getElementById("ops-body"),
+  opsSummary: document.getElementById("ops-summary"),
+  opsHistory: document.getElementById("ops-history"),
+  opsExportsEnabled: document.getElementById("ops-exports-enabled"),
+  opsFrequency: document.getElementById("ops-frequency"),
+  opsHour: document.getElementById("ops-hour"),
+  opsMinute: document.getElementById("ops-minute"),
+  opsFormatJson: document.getElementById("ops-format-json"),
+  opsFormatCsv: document.getElementById("ops-format-csv"),
+  opsDatasetFindings: document.getElementById("ops-dataset-findings"),
+  opsDatasetHistory: document.getElementById("ops-dataset-history"),
+  opsSave: document.getElementById("ops-save"),
+  opsRunExport: document.getElementById("ops-run-export"),
+  opsNotifyEnabled: document.getElementById("ops-notify-enabled"),
+  opsWebhookUrl: document.getElementById("ops-webhook-url"),
+  opsRuleHighCorrob: document.getElementById("ops-rule-high-corrob"),
+  opsRuleNewlyFixed: document.getElementById("ops-rule-newly-fixed"),
+  opsRuleSourceUnhealthy: document.getElementById("ops-rule-source-unhealthy"),
+  opsCorrobMin: document.getElementById("ops-corrob-min"),
+  opsFailMin: document.getElementById("ops-fail-min"),
 };
 
 function fmt(n) {
@@ -114,6 +138,169 @@ function setPollSourcesPanelOpen(isOpen) {
   }
 }
 
+
+
+function setOpsPanelOpen(isOpen) {
+  const open = Boolean(isOpen);
+  if (el.opsBody) el.opsBody.classList.toggle("hidden", !open);
+  if (el.opsToggle) el.opsToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  if (el.opsToggleIcon) el.opsToggleIcon.textContent = open ? "-" : "+";
+  if (el.opsShowBtn) {
+    el.opsShowBtn.setAttribute("aria-pressed", open ? "true" : "false");
+    el.opsShowBtn.textContent = open ? "Hide Operations" : "Show Operations";
+  }
+}
+
+function fmtOpsAgo(iso) {
+  return formatAgo(iso);
+}
+
+function renderOpsHistory(status) {
+  if (!el.opsHistory) return;
+  const history = ((status || {}).history || []).slice(0, 8);
+  if (!history.length) {
+    el.opsHistory.innerHTML = '<div class="poll-history__item">No export jobs recorded yet.</div>';
+    return;
+  }
+  el.opsHistory.innerHTML = "";
+  history.forEach((h) => {
+    const item = document.createElement("div");
+    item.className = `poll-history__item ${h.status === "error" ? "error" : ""}`.trim();
+    const outputs = Array.isArray(h.outputs) ? h.outputs.length : 0;
+    const dur = h.duration_ms == null ? "n/a" : `${h.duration_ms}ms`;
+    const err = h.error ? ` | err: ${String(h.error).slice(0, 90)}` : "";
+    item.textContent = `${h.status || "unknown"} | ${fmtOpsAgo(h.completed)} | outputs=${outputs} | dur=${dur} | origin=${h.trigger_origin || "n/a"}${err}`;
+    el.opsHistory.appendChild(item);
+  });
+}
+
+function renderOpsStatus() {
+  const status = state.opsStatus;
+  if (!status) {
+    if (el.opsSummary) el.opsSummary.textContent = "Operations status unavailable.";
+    return;
+  }
+  const cfg = status.config || {};
+  const exp = cfg.exports || {};
+  const notif = cfg.notifications || {};
+  const runtime = status.runtime || {};
+
+  if (el.opsExportsEnabled) el.opsExportsEnabled.checked = Boolean(exp.enabled);
+  if (el.opsFrequency) el.opsFrequency.value = exp.frequency || "daily";
+  if (el.opsHour) el.opsHour.value = String(exp.hour_utc ?? 1);
+  if (el.opsMinute) el.opsMinute.value = String(exp.minute_utc ?? 0);
+  const formats = new Set((exp.formats || []).map((x) => String(x).toLowerCase()));
+  if (el.opsFormatJson) el.opsFormatJson.checked = formats.has("json");
+  if (el.opsFormatCsv) el.opsFormatCsv.checked = formats.has("csv");
+  const ds = exp.datasets || {};
+  if (el.opsDatasetFindings) el.opsDatasetFindings.checked = Boolean(ds.findings);
+  if (el.opsDatasetHistory) el.opsDatasetHistory.checked = Boolean(ds.poll_history);
+
+  if (el.opsNotifyEnabled) el.opsNotifyEnabled.checked = Boolean(notif.enabled);
+  const channel = Array.isArray(notif.channels) && notif.channels.length ? notif.channels[0] : {};
+  if (el.opsWebhookUrl) {
+    const current = el.opsWebhookUrl.value || "";
+    const serverVal = String((channel && channel.url) || "");
+    if (!current || current === "***redacted***") {
+      el.opsWebhookUrl.value = serverVal;
+    }
+  }
+  const rules = notif.rules || {};
+  if (el.opsRuleHighCorrob) el.opsRuleHighCorrob.checked = Boolean((rules.high_corroboration_in_scope || {}).enabled);
+  if (el.opsRuleNewlyFixed) el.opsRuleNewlyFixed.checked = Boolean((rules.newly_fixed_in_scope || {}).enabled);
+  if (el.opsRuleSourceUnhealthy) el.opsRuleSourceUnhealthy.checked = Boolean((rules.source_unhealthy || {}).enabled);
+  if (el.opsCorrobMin) el.opsCorrobMin.value = String((rules.high_corroboration_in_scope || {}).min_corroboration_score ?? 3);
+  if (el.opsFailMin) el.opsFailMin.value = String((rules.source_unhealthy || {}).min_consecutive_failures ?? 2);
+
+  const next = runtime.next_run_in_seconds == null ? "n/a" : `${runtime.next_run_in_seconds}s`;
+  const last = runtime.last_run_completed ? fmtOpsAgo(runtime.last_run_completed) : "never";
+  const outputs = Array.isArray(runtime.last_run_outputs) ? runtime.last_run_outputs.length : 0;
+  const err = runtime.last_run_error ? ` | err: ${runtime.last_run_error}` : "";
+  if (el.opsSummary) {
+    el.opsSummary.textContent = `Scheduler: ${exp.enabled ? "enabled" : "disabled"} | next export: ${next} | last export: ${last} | last outputs: ${outputs}${err}`;
+  }
+  renderOpsHistory(status);
+}
+
+async function loadOpsStatus() {
+  const res = await fetch("/api/ops/status", { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load ops status");
+  state.opsStatus = await res.json();
+  renderOpsStatus();
+}
+
+function collectOpsConfigPayload() {
+  const existing = (state.opsStatus && state.opsStatus.config) || {};
+  const existingChannels = (((existing.notifications || {}).channels) || []).map((c) => ({ ...c }));
+  const first = existingChannels[0] || { type: "webhook", name: "default", url: "", enabled: false };
+  let webhookUrl = (el.opsWebhookUrl && el.opsWebhookUrl.value || "").trim();
+  if (webhookUrl === "***redacted***") webhookUrl = "";
+  return {
+    notifications: {
+      enabled: Boolean(el.opsNotifyEnabled && el.opsNotifyEnabled.checked),
+      channels: [{
+        type: String(first.type || "webhook"),
+        name: String(first.name || "default"),
+        enabled: Boolean(webhookUrl) || Boolean(first.enabled),
+        url: webhookUrl || String(first.url || ""),
+      }],
+      rules: {
+        high_corroboration_in_scope: {
+          enabled: Boolean(el.opsRuleHighCorrob && el.opsRuleHighCorrob.checked),
+          min_corroboration_score: Number(el.opsCorrobMin && el.opsCorrobMin.value || 3),
+          require_in_scope: true,
+        },
+        newly_fixed_in_scope: {
+          enabled: Boolean(el.opsRuleNewlyFixed && el.opsRuleNewlyFixed.checked),
+          require_in_scope: true,
+        },
+        source_unhealthy: {
+          enabled: Boolean(el.opsRuleSourceUnhealthy && el.opsRuleSourceUnhealthy.checked),
+          min_consecutive_failures: Number(el.opsFailMin && el.opsFailMin.value || 2),
+        },
+      },
+    },
+    exports: {
+      enabled: Boolean(el.opsExportsEnabled && el.opsExportsEnabled.checked),
+      frequency: (el.opsFrequency && el.opsFrequency.value) || "daily",
+      hour_utc: Number(el.opsHour && el.opsHour.value || 1),
+      minute_utc: Number(el.opsMinute && el.opsMinute.value || 0),
+      formats: [el.opsFormatJson && el.opsFormatJson.checked ? "json" : null, el.opsFormatCsv && el.opsFormatCsv.checked ? "csv" : null].filter(Boolean),
+      datasets: {
+        findings: Boolean(el.opsDatasetFindings && el.opsDatasetFindings.checked),
+        poll_history: Boolean(el.opsDatasetHistory && el.opsDatasetHistory.checked),
+      },
+      output_subdir: (((existing.exports || {}).output_subdir) || "exports"),
+    },
+  };
+}
+
+async function saveOpsConfig() {
+  const payload = collectOpsConfigPayload();
+  const res = await fetch("/api/ops/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Failed to save ops config");
+  state.opsStatus = await res.json();
+  renderOpsStatus();
+}
+
+async function runOpsExportNow() {
+  const res = await fetch("/api/ops/run-export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ origin: "manual_ui_ops_export" }),
+  });
+  if (!res.ok) throw new Error("Failed to queue export job");
+  state.opsStatus = await res.json();
+  renderOpsStatus();
+  if (el.opsSummary && state.opsStatus && state.opsStatus.message) {
+    el.opsSummary.textContent += ` | ${state.opsStatus.message}`;
+  }
+  setTimeout(async () => { try { await loadOpsStatus(); } catch { /* no-op */ } }, 2000);
+}
 
 const SAVED_VIEWS_STORAGE_KEY = "ai-cve-radar.saved-views.v1";
 
@@ -959,6 +1146,7 @@ async function runPollSource(source) {
   setTimeout(async () => {
     try {
       await loadPollStatus();
+      await loadOpsStatus();
     } catch {
       // no-op
     }
@@ -982,6 +1170,7 @@ async function runPollNow() {
   setTimeout(async () => {
     try {
       await loadPollStatus();
+      await loadOpsStatus();
       await loadFindings();
     } catch {
       // no-op
@@ -1070,6 +1259,36 @@ function bindEvents() {
   if (el.pollShowFeeds) {
     el.pollShowFeeds.addEventListener("change", () => {
       setPollSourcesPanelOpen(el.pollShowFeeds.checked);
+    });
+  }
+  if (el.opsToggle) {
+    el.opsToggle.addEventListener("click", () => {
+      const expanded = el.opsToggle.getAttribute("aria-expanded") === "true";
+      setOpsPanelOpen(!expanded);
+    });
+  }
+  if (el.opsShowBtn) {
+    el.opsShowBtn.addEventListener("click", () => {
+      const expanded = el.opsToggle && el.opsToggle.getAttribute("aria-expanded") === "true";
+      setOpsPanelOpen(!expanded);
+    });
+  }
+  if (el.opsSave) {
+    el.opsSave.addEventListener("click", async () => {
+      try {
+        await saveOpsConfig();
+      } catch {
+        alert("Failed to save operations config.");
+      }
+    });
+  }
+  if (el.opsRunExport) {
+    el.opsRunExport.addEventListener("click", async () => {
+      try {
+        await runOpsExportNow();
+      } catch {
+        alert("Failed to trigger export job.");
+      }
     });
   }
   if (el.pollHistoryErrorsOnly) {
@@ -1215,15 +1434,22 @@ function bindEvents() {
   el.pollIntervalValue.textContent = String(el.pollInterval.value);
   switchView("radar");
   setPollSourcesPanelOpen(true);
+  setOpsPanelOpen(false);
   await loadFindings();
   try {
     await loadPollStatus();
   } catch {
     el.pollSummary.textContent = "Poll status unavailable.";
   }
+  try {
+    await loadOpsStatus();
+  } catch {
+    if (el.opsSummary) el.opsSummary.textContent = "Operations status unavailable.";
+  }
   setInterval(async () => {
     try {
       await loadPollStatus();
+      await loadOpsStatus();
     } catch {
       // no-op
     }
