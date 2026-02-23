@@ -67,6 +67,73 @@ The application is designed for analysts and researchers who need more than CVSS
 - Expanded context fields (SSVC-style, GHSA linkage, sightings, OpenVEX, regional feeds, vendor/distro signals).
 - Source freshness telemetry helps evaluate collection quality and source availability over time.
 
+## Analyst Playbook
+
+### 1. Daily Triage (High-Value First)
+
+Use this workflow to reduce noise and focus on findings that are both relevant and actionable.
+
+- Start with a saved view such as `High corroboration + in scope` or create one with:
+  - `In target scope`
+  - `High corroboration only`
+  - `Has vendor corroboration`
+  - `Has fix version` (optional if you want patch-ready items first)
+- Sort by `Priority` or `Corroboration` depending on whether you want operational urgency or evidence strength first.
+- Review the right-side detail panel for:
+  - corroboration score and source-family presence
+  - regional escalation badges
+  - vendor/distro corroboration summary
+  - patch matrix table
+- Set triage state and add notes (`investigating`, `mitigated`, `accepted_risk`) directly in the dashboard.
+
+Recommended outcome:
+- A short list of in-scope, corroborated findings with triage state and owner notes.
+
+### 2. Patch Watch / Remediation Planning
+
+Use this workflow when the goal is patch execution readiness rather than broad monitoring.
+
+- Filter for:
+  - `Has fix version`
+  - `Has vendor corroboration` and/or `Has distro fix context`
+  - `In target scope`
+- Sort by `Asset Mapping` (to prioritize environment impact) or `Priority`.
+- Use the patch matrix table to compare patch/fix presence across `NVD`, `CVE.org`, `OSV`, and vendor/distro sources.
+- Use vendor/distro corroboration details (MSRC, Red Hat, Debian, Ubuntu, SUSE, Oracle, Cisco) to validate patch guidance before routing tickets.
+- Export findings (`CSV`/`JSON`) for patch teams or change-control workflows.
+
+Recommended outcome:
+- A remediation-ready queue with patch context, corroboration, and asset relevance.
+
+### 3. Source Health / Collection Operations
+
+Use this workflow to validate data freshness and troubleshoot source issues without stopping analyst work.
+
+- In the top poll panel, monitor:
+  - source freshness cards
+  - reliability metrics (success rate, consecutive failures, average latency)
+  - reliability alerts
+- Use `Unhealthy sources only` to focus on stale/erroring feeds.
+- Use `Poll Source` on a single stale/erroring feed instead of triggering a full poll cycle.
+- Use `Recent Poll Runs` with `Errors only` and `Source` filters to troubleshoot ingestion failures.
+- Use `Retry` on failed history entries to replay a failed source/full poll.
+- Export poll history (`CSV`/`JSON`) for audit, handoff, or incident documentation.
+
+Recommended outcome:
+- Verified collection health and fresher data with minimal unnecessary upstream polling.
+
+### 4. Research / Comparative Analysis
+
+Use this workflow to study how the same CVE is represented across sources and over time.
+
+- Reprocess historical findings after enrichment changes using `REPROCESS_SEEN=true` to backfill new fields.
+- Compare corroboration score, patch matrix, and contradiction flags across findings.
+- Export enriched findings JSON for notebooks, dashboards, or downstream analytics.
+- Track source reliability telemetry to understand collection bias and availability effects on results.
+
+Recommended outcome:
+- Reproducible datasets with source-aware context for experiments and reporting.
+
 ## Quick Start
 
 1. Install via editable package metadata (recommended):
