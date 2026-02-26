@@ -1,0 +1,25 @@
+﻿{
+  "hosts": [
+    {
+      "name": "satellite-a",
+      "host": "10.0.0.10",
+      "user": "ubuntu",
+      "port": 22,
+      "groups": ["satellites", "prod"],
+      "ssh_key_path": "~/.ssh/id_rsa",
+      "enabled": true,
+      "vars": {
+        "ansible_python_interpreter": "/usr/bin/python3",
+        "cve_output_dir": "/opt/ai-dev/output"
+      }
+    },
+    {
+      "name": "satellite-b",
+      "host": "10.0.0.11",
+      "user": "ubuntu",
+      "enabled": false,
+      "groups": ["satellites", "staging"],
+      "vars": {}
+    }
+  ]
+}
