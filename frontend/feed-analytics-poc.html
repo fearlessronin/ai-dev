@@ -1,0 +1,276 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Feed Analytics POC</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #081019;
+        --panel: rgba(13, 24, 38, 0.92);
+        --panel2: rgba(18, 32, 49, 0.96);
+        --line: rgba(140, 176, 206, 0.18);
+        --text: #eaf4ff;
+        --muted: #9db3c7;
+        --ok: #40d68f;
+        --warn: #ffd166;
+        --bad: #ff6b6b;
+        --accent: #48b2ff;
+        --accent2: #77f7d7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 10% 10%, rgba(72, 178, 255, 0.18), transparent 45%),
+          radial-gradient(circle at 90% 0%, rgba(119, 247, 215, 0.12), transparent 38%),
+          linear-gradient(180deg, #050a11, var(--bg));
+      }
+      .wrap { max-width: 1200px; margin: 0 auto; padding: 20px; }
+      .hero { display: grid; gap: 10px; margin-bottom: 18px; }
+      .eyebrow { color: var(--accent2); font-family: "IBM Plex Mono", monospace; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; }
+      h1 { margin: 0; font-size: clamp(24px, 4vw, 38px); }
+      .sub { color: var(--muted); margin: 0; }
+      .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+      button, select { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; }
+      button { cursor: pointer; }
+      button:hover { border-color: rgba(72,178,255,.45); }
+      .badge { border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; color: var(--muted); background: rgba(255,255,255,0.02); font-size: 13px; }
+      .grid { display: grid; gap: 14px; }
+      .kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+      .card { background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)), var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; backdrop-filter: blur(8px); }
+      .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+      .value { margin-top: 8px; font-size: 28px; font-weight: 700; }
+      .hint { margin-top: 6px; color: var(--muted); font-size: 12px; }
+      .panels { grid-template-columns: 1.05fr 0.95fr; }
+      @media (max-width: 920px) { .panels { grid-template-columns: 1fr; } }
+      .section-title { margin: 0 0 12px; font-size: 16px; }
+      .bars { display: grid; gap: 8px; }
+      .bar-row { display: grid; grid-template-columns: 120px 1fr 70px 70px; gap: 10px; align-items: center; font-size: 13px; }
+      .bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .bar-track { height: 10px; border-radius: 999px; background: rgba(255,255,255,0.06); overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+      .bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+      .mono { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--muted); }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+      th { color: var(--muted); font-weight: 500; }
+      .status-pill { border-radius: 999px; padding: 2px 8px; font-size: 12px; display: inline-block; }
+      .ok { background: rgba(64,214,143,.14); color: var(--ok); }
+      .warning { background: rgba(255,209,102,.14); color: var(--warn); }
+      .error { background: rgba(255,107,107,.14); color: var(--bad); }
+      .tiny-bars { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; align-items: end; height: 80px; }
+      .tiny-bars div { background: linear-gradient(180deg, rgba(72,178,255,.85), rgba(119,247,215,.55)); border-radius: 4px 4px 2px 2px; min-height: 3px; }
+      .foot { margin-top: 8px; color: var(--muted); font-size: 12px; }
+      .error-box { white-space: pre-wrap; color: #ffd9d9; background: rgba(255,107,107,.08); border: 1px solid rgba(255,107,107,.2); border-radius: 12px; padding: 12px; }
+      a.inline { color: var(--accent2); text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <div class="eyebrow">Companion App POC</div>
+        <h1>Feed Analytics + Status</h1>
+        <p class="sub">Read-only operations view built on your existing `/api/poll/status` endpoint.</p>
+        <div class="toolbar">
+          <button id="refresh">Refresh</button>
+          <select id="sort">
+            <option value="stale-first">Sort: stale/error first</option>
+            <option value="latency">Sort: avg latency</option>
+            <option value="records">Sort: records</option>
+            <option value="name">Sort: name</option>
+          </select>
+          <label class="badge"><input id="auto" type="checkbox" checked /> Auto refresh (30s)</label>
+          <span id="asof" class="badge">Loading…</span>
+          <a class="badge inline" href="/">Open main dashboard</a>
+        </div>
+      </header>
+      <section id="error" class="error-box" hidden></section>
+      <section class="grid kpis" id="kpis"></section>
+      <section class="grid panels" style="margin-top:14px;">
+        <section class="card">
+          <h2 class="section-title">Source Reliability Snapshot</h2>
+          <div id="reliability-bars" class="bars"></div>
+          <div class="foot">Bars show average duration (ms) relative to the slowest source in current snapshot.</div>
+        </section>
+        <section class="card">
+          <h2 class="section-title">Recent Poll Runs</h2>
+          <div id="poll-run-bars" class="tiny-bars" aria-label="Recent poll durations"></div>
+          <div id="poll-run-summary" class="foot"></div>
+        </section>
+      </section>
+      <section class="card" style="margin-top:14px;">
+        <h2 class="section-title">Feed Status Table</h2>
+        <div style="overflow:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Status</th>
+                <th>Success %</th>
+                <th>Consec Fail</th>
+                <th>Records</th>
+                <th>Last Duration</th>
+                <th>Last Success Age</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+    <script>
+      const els = {
+        refresh: document.getElementById("refresh"),
+        sort: document.getElementById("sort"),
+        auto: document.getElementById("auto"),
+        asof: document.getElementById("asof"),
+        kpis: document.getElementById("kpis"),
+        bars: document.getElementById("reliability-bars"),
+        rows: document.getElementById("rows"),
+        runBars: document.getElementById("poll-run-bars"),
+        runSummary: document.getElementById("poll-run-summary"),
+        error: document.getElementById("error"),
+      };
+      let timer = null;
+      let lastData = null;
+      const fmtNum = (n) => (Number.isFinite(n) ? n.toLocaleString() : "-");
+      const fmtPct = (n) => (Number.isFinite(n) ? `${Math.round(n * 100)}%` : "-");
+      const fmtMs = (n) => (Number.isFinite(n) && n > 0 ? `${Math.round(n).toLocaleString()} ms` : "-");
+      const fmtAge = (s) => {
+        if (!Number.isFinite(s)) return "-";
+        if (s < 60) return `${Math.round(s)}s`;
+        if (s < 3600) return `${Math.round(s / 60)}m`;
+        return `${Math.round(s / 3600)}h`;
+      };
+      function statusClass(src) {
+        if (src.status === "error") return "error";
+        if (src.stale || (src.reliability && src.reliability.consecutive_failures > 0)) return "warning";
+        return "ok";
+      }
+      function sourceList(data) {
+        return Object.entries(data.sources || {}).map(([name, src]) => ({
+          name,
+          ...src,
+          reliability: src.reliability || (data.source_reliability || {})[name] || {},
+        }));
+      }
+      function sortSources(list, mode) {
+        const priority = (s) => (s.status === "error" ? 3 : s.stale ? 2 : (s.reliability?.consecutive_failures || 0) > 0 ? 1 : 0);
+        const copy = [...list];
+        if (mode === "latency") return copy.sort((a, b) => (b.reliability?.avg_duration_ms || 0) - (a.reliability?.avg_duration_ms || 0));
+        if (mode === "records") return copy.sort((a, b) => (b.records || 0) - (a.records || 0));
+        if (mode === "name") return copy.sort((a, b) => a.name.localeCompare(b.name));
+        return copy.sort((a, b) => priority(b) - priority(a) || (b.reliability?.avg_duration_ms || 0) - (a.reliability?.avg_duration_ms || 0));
+      }
+      function renderKpis(data, sources) {
+        const total = sources.length;
+        const errors = sources.filter((s) => s.status === "error").length;
+        const stale = sources.filter((s) => s.stale).length;
+        const ok = total - errors - stale;
+        const latestHistory = Array.isArray(data.history) ? data.history[0] : null;
+        const recent = (data.history || []).slice(0, 12);
+        const avgCycle = recent.length ? recent.reduce((sum, h) => sum + (h.duration_ms || 0), 0) / recent.length : 0;
+        const totalRecords = sources.reduce((sum, s) => sum + (s.records || 0), 0);
+        const polling = data.is_polling ? "Polling now" : "Idle";
+        const cards = [
+          ["Feeds Healthy", ok, `${total} total feeds`],
+          ["Needs Attention", errors + stale, `${errors} errors · ${stale} stale`],
+          ["Last Cycle", latestHistory?.status || "-", `${fmtMs(latestHistory?.duration_ms || 0)} · ${polling}`],
+          ["Avg Cycle (12)", fmtMs(avgCycle), `${recent.length || 0} recent runs`],
+          ["Records (snapshot)", fmtNum(totalRecords), "Current source record counts"],
+          ["Next Run", data.next_run_in_seconds != null ? fmtAge(data.next_run_in_seconds) : "-", `Auto-poll ${data.enabled ? "on" : "off"}`],
+        ];
+        els.kpis.innerHTML = cards.map(([label, value, hint]) => `
+          <article class="card">
+            <div class="label">${label}</div>
+            <div class="value">${value}</div>
+            <div class="hint">${hint}</div>
+          </article>
+        `).join("");
+      }
+      function renderReliabilityBars(sources) {
+        const top = sources.filter((s) => (s.reliability?.total_polls || 0) > 0).sort((a, b) => (b.reliability?.avg_duration_ms || 0) - (a.reliability?.avg_duration_ms || 0)).slice(0, 10);
+        const max = Math.max(1, ...top.map((s) => s.reliability?.avg_duration_ms || 0));
+        els.bars.innerHTML = top.map((s) => {
+          const avg = s.reliability?.avg_duration_ms || 0;
+          const rate = s.reliability?.success_rate ?? NaN;
+          const pct = Math.max(3, Math.round((avg / max) * 100));
+          return `
+            <div class="bar-row">
+              <div class="bar-name">${s.name}</div>
+              <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+              <div class="mono">${fmtMs(avg)}</div>
+              <div><span class="status-pill ${statusClass(s)}">${fmtPct(rate)}</span></div>
+            </div>
+          `;
+        }).join("") || `<div class="mono">No reliability data yet.</div>`;
+      }
+      function renderPollRuns(data) {
+        const history = (data.history || []).slice(0, 12).reverse();
+        const max = Math.max(1, ...history.map((h) => h.duration_ms || 0));
+        els.runBars.innerHTML = history.map((h) => {
+          const height = Math.max(6, Math.round(((h.duration_ms || 0) / max) * 76));
+          const color = h.status === "error" ? "rgba(255,107,107,.8)" : "linear-gradient(180deg, rgba(72,178,255,.85), rgba(119,247,215,.55))";
+          return `<div title="${h.status} · ${fmtMs(h.duration_ms || 0)}" style="height:${height}px;background:${color};"></div>`;
+        }).join("");
+        const errCount = (data.history || []).slice(0, 12).filter((h) => h.status === "error").length;
+        const avg = history.length ? history.reduce((s, h) => s + (h.duration_ms || 0), 0) / history.length : 0;
+        els.runSummary.textContent = `${history.length} runs · avg ${fmtMs(avg)} · ${errCount} errors`;
+      }
+      function renderTable(sources) {
+        els.rows.innerHTML = sources.map((s) => {
+          const rel = s.reliability || {};
+          return `
+            <tr>
+              <td><span class="mono">${s.name}</span></td>
+              <td><span class="status-pill ${statusClass(s)}">${s.status || "unknown"}${s.stale ? " / stale" : ""}</span></td>
+              <td>${fmtPct(rel.success_rate)}</td>
+              <td>${fmtNum(rel.consecutive_failures || 0)}</td>
+              <td>${fmtNum(s.records || 0)}</td>
+              <td>${fmtMs(rel.last_duration_ms || s.duration_ms || 0)}</td>
+              <td>${fmtAge(s.last_success_age_seconds)}</td>
+            </tr>
+          `;
+        }).join("");
+      }
+      function render(data) {
+        const sources = sortSources(sourceList(data), els.sort.value);
+        renderKpis(data, sources);
+        renderReliabilityBars(sources);
+        renderPollRuns(data);
+        renderTable(sources);
+        els.asof.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+        els.error.hidden = true;
+      }
+      async function load() {
+        try {
+          const res = await fetch("/api/poll/status", { cache: "no-store" });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          lastData = data;
+          render(data);
+        } catch (err) {
+          els.error.hidden = false;
+          els.error.textContent = `Failed to load /api/poll/status\n${String(err)}`;
+        }
+      }
+      function setAutoRefresh() {
+        if (timer) clearInterval(timer);
+        if (els.auto.checked) timer = setInterval(load, 30000);
+      }
+      els.refresh.addEventListener("click", load);
+      els.sort.addEventListener("change", () => lastData && render(lastData));
+      els.auto.addEventListener("change", setAutoRefresh);
+      load();
+      setAutoRefresh();
+    </script>
+  </body>
+</html>
