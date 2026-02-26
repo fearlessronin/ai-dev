@@ -1,0 +1,148 @@
+﻿spec_version: "1.0"
+project:
+  name: cve-radar-satellite-rollout
+  description: Sample spec for deploying/updating AI CVE Watcher to satellite hosts via Git + Ansible
+  owner: your-name-or-team
+  environment: staging
+
+control_plane:
+  ansible_runs_from: local_workstation
+  control_node_os: windows
+  ansible_version: "2.16+"
+  python_version: "3.11+"
+
+satellite_hosts:
+  - name: satellite-a
+    enabled: true
+    os_family: linux
+    os_distribution: ubuntu
+    os_version: "22.04"
+    connection:
+      transport: ssh
+      host: 10.0.0.10
+      port: 22
+      user: ubuntu
+      auth_type: ssh_key
+      ssh_key_path: ~/.ssh/id_rsa
+    groups: [satellites, staging]
+    vars:
+      ansible_python_interpreter: /usr/bin/python3
+      remote_app_path: /opt/ai-dev
+      app_port: 8080
+      service_manager: systemd
+
+  - name: satellite-b
+    enabled: false
+    os_family: linux
+    os_distribution: ubuntu
+    os_version: "22.04"
+    connection:
+      transport: ssh
+      host: 10.0.0.11
+      port: 22
+      user: ubuntu
+      auth_type: ssh_key
+      ssh_key_path: ~/.ssh/id_rsa
+    groups: [satellites, prod]
+    vars:
+      ansible_python_interpreter: /usr/bin/python3
+      remote_app_path: /opt/ai-dev
+      app_port: 8080
+      service_manager: systemd
+
+automation_repo:
+  repo_url: git@github.com:your-org/your-ansible-automation.git
+  branch: main
+  tag: null
+  commit: null
+  auth:
+    method: ssh_key
+    ssh_key_path: ~/.ssh/id_rsa
+  expected_paths:
+    playbook: playbooks/cve_radar_sync.yml
+    roles_dir: roles
+    inventory_templates_dir: inventories/templates
+
+application_repo:
+  repo_url: https://github.com/fearlessronin/ai-dev.git
+  branch: main
+  deploy_path: /opt/ai-dev
+  install_method: pip_requirements
+  python_bin: python3
+  venv_path: /opt/ai-dev/.venv
+
+deployment_pattern:
+  profile_name: cve-radar-satellite
+  run_mode: deploy_and_restart
+  service_mode: serve
+  commands_expected:
+    serve: python -m cve_agent.cli serve --host 127.0.0.1 --port 8080
+    daemon: python -m cve_agent.cli daemon
+    once: python -m cve_agent.cli once
+  steps:
+    - sync_automation_repo
+    - render_inventory_and_vars
+    - clone_or_pull_app_repo_on_satellite
+    - install_or_update_python_dependencies
+    - write_env_file_or_env_vars
+    - restart_service_or_process
+    - health_check_api
+
+ansible_execution:
+  playbook: playbooks/cve_radar_sync.yml
+  inventory_format: yaml
+  default_limit: satellites
+  serial: 1
+  forks: 5
+  check_mode_default: true
+  diff_mode: false
+  timeout_seconds: 1800
+  become: true
+  become_method: sudo
+  extra_vars:
+    app_service_name: ai-cve-watcher
+    app_port: 8080
+    health_url: http://127.0.0.1:8080/api/poll/status
+
+secrets_and_config:
+  secret_source: manual_env_file
+  env_file_strategy: template_rendered_on_control_node
+  env_file_target_path: /opt/ai-dev/.env
+  required_env_vars:
+    - NVD_API_KEY
+    - GITHUB_TOKEN
+  non_secret_env_vars:
+    POLL_INTERVAL_MINUTES: "30"
+    OUTPUT_DIR: /opt/ai-dev/output
+    LOG_LEVEL: INFO
+  log_redaction:
+    - NVD_API_KEY
+    - GITHUB_TOKEN
+
+health_checks:
+  http:
+    - name: poll_status
+      url: http://127.0.0.1:8080/api/poll/status
+      expected_status: 200
+      timeout_seconds: 10
+  process:
+    - name: cve_agent_serve
+      match: cve_agent.cli serve
+      required: true
+
+operations_policy:
+  dry_run_first: true
+  require_explicit_apply: true
+  allow_destructive_actions: false
+  rollback_strategy: git_checkout_previous_commit_and_restart
+  maintenance_window_utc: "02:00-04:00"
+  max_parallel_hosts: 1
+
+what_you_want_codex_to_build_next:
+  ui_or_cli_first: cli
+  generate_real_profile_json: true
+  generate_real_hosts_json: true
+  generate_ansible_playbook_template: true
+  generate_role_task_templates: true
+  wire_to_companion_app_plan_run: true
+  notes: Replace sample host IPs and repo URLs with real values before execution.

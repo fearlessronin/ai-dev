@@ -1,0 +1,322 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Companion App UI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+      :root { --bg:#0a111b; --panel:#101b2a; --panel2:#132134; --line:#24384f; --text:#ecf4ff; --muted:#9eb4c7; --accent:#4cb4ff; --accent2:#6cf2c4; --bad:#ff7f7f; --ok:#59d58f; --warn:#ffd166; }
+      * { box-sizing:border-box; }
+      body { margin:0; font-family:"Space Grotesk",sans-serif; color:var(--text); background:radial-gradient(circle at 15% 10%, rgba(76,180,255,.15), transparent 40%), radial-gradient(circle at 85% 0%, rgba(108,242,196,.12), transparent 35%), #070c13; }
+      .wrap { max-width: 1280px; margin: 0 auto; padding: 18px; }
+      .hero { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap; margin-bottom:14px; }
+      h1 { margin:0; font-size: clamp(24px, 4vw, 34px); }
+      .sub { margin:6px 0 0; color:var(--muted); }
+      .badge { border:1px solid var(--line); border-radius:999px; padding:8px 12px; color:var(--muted); background:rgba(255,255,255,.02); font-size:12px; }
+      .toolbar { display:flex; gap:8px; flex-wrap:wrap; }
+      button, select { background:var(--panel2); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px 12px; cursor:pointer; font:inherit; }
+      button:hover, select:hover { border-color: rgba(76,180,255,.6); }
+      .primary { background: linear-gradient(180deg, rgba(76,180,255,.2), rgba(76,180,255,.08)), var(--panel2); }
+      .grid { display:grid; gap:14px; }
+      .top { grid-template-columns: 1.1fr .9fr; }
+      .bottom { grid-template-columns: 1fr 1fr; }
+      @media (max-width: 980px){ .top,.bottom { grid-template-columns:1fr; } }
+      .card { background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.005)), var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; }
+      .title { margin:0 0 10px; font-size:16px; }
+      .muted { color:var(--muted); }
+      .mono { font-family:"IBM Plex Mono",monospace; font-size:12px; }
+      .row { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+      .kpi-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(170px,1fr)); gap:10px; }
+      .kpi { border:1px solid rgba(255,255,255,.06); border-radius:12px; padding:10px; background:rgba(255,255,255,.01); }
+      .kpi .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em; }
+      .kpi .value { font-size:22px; font-weight:700; margin-top:6px; }
+      .log { white-space:pre-wrap; font-family:"IBM Plex Mono",monospace; background:#0a141f; border:1px solid rgba(255,255,255,.05); border-radius:10px; padding:10px; max-height:260px; overflow:auto; font-size:12px; }
+      .list { display:grid; gap:8px; }
+      .list button { text-align:left; width:100%; }
+      .pill { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-size:12px; color:var(--muted); }
+      details { border:1px solid rgba(255,255,255,.05); border-radius:10px; padding:8px 10px; background:rgba(255,255,255,.01); margin-bottom:8px; }
+      summary { cursor:pointer; font-weight:500; }
+      .error { color: var(--bad); }
+      .ok { color: var(--ok); }
+      .warn { color: var(--warn); }
+      .chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+      .chip { border:1px solid var(--line); border-radius:999px; padding:5px 10px; font-size:12px; color:var(--muted); background:rgba(255,255,255,.02); }
+      .table-wrap { overflow:auto; border:1px solid rgba(255,255,255,.05); border-radius:10px; }
+      table { width:100%; border-collapse:collapse; font-size:13px; }
+      th, td { text-align:left; padding:8px 7px; border-bottom:1px solid rgba(255,255,255,.05); vertical-align:top; }
+      th { color:var(--muted); position:sticky; top:0; background:#0d1724; }
+      .status-pill { display:inline-block; border-radius:999px; padding:2px 8px; font-size:12px; }
+      .status-on { background:rgba(89,213,143,.12); color:var(--ok); }
+      .status-off { background:rgba(255,127,127,.12); color:var(--bad); }
+      .small { font-size:12px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <div>
+          <h1>Companion App UI</h1>
+          <p class="sub">Thin UI for satellite Git + Ansible plan visualization. Refresh shows updated satellite lists and metadata after config/spec changes.</p>
+        </div>
+        <div class="toolbar">
+          <span id="asof" class="badge">Loading…</span>
+          <button id="refresh">Refresh</button>
+          <button id="init">Init Runtime</button>
+          <button id="render">Render Example</button>
+          <button id="plan" class="primary">Plan Example Run</button>
+        </div>
+      </header>
+
+      <section class="grid top">
+        <section class="card">
+          <h2 class="title">Overview</h2>
+          <div id="kpis" class="kpi-grid"></div>
+          <div class="row" style="margin-top:10px;"><span class="pill">Runtime</span><span id="runtime" class="mono muted"></span></div>
+          <div class="row"><span class="pill">Last Render</span><span id="last-render" class="mono muted">-</span></div>
+          <div class="row"><span class="pill">Last Sync</span><span id="last-sync" class="mono muted">-</span></div>
+        </section>
+        <section class="card">
+          <h2 class="title">Action Output</h2>
+          <div id="action-output" class="log muted">No actions yet.</div>
+        </section>
+      </section>
+
+      <section class="card" style="margin-top:14px;">
+        <div class="row">
+          <h2 class="title" style="margin:0;">Satellite Inventory Snapshot</h2>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <label class="small muted">Source</label>
+            <select id="sat-source-filter">
+              <option value="combined">Combined (Registry + Spec JSON)</option>
+              <option value="registry">Hosts Registry Only</option>
+              <option value="spec_json">Spec JSON Only</option>
+            </select>
+          </div>
+        </div>
+        <div id="sat-meta" class="chips"></div>
+        <div id="sat-file-meta" class="chips"></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Source</th>
+                <th>Enabled</th>
+                <th>Host</th>
+                <th>User</th>
+                <th>Groups / Env</th>
+                <th>OS / Auth</th>
+                <th>App Path / Port</th>
+              </tr>
+            </thead>
+            <tbody id="sat-rows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="grid bottom" style="margin-top:14px;">
+        <section class="card">
+          <h2 class="title">Recent Run Plans</h2>
+          <div id="run-plans" class="list"></div>
+          <div id="run-plan-detail" class="log muted" style="margin-top:10px;">Select a run plan to inspect.</div>
+        </section>
+        <section class="card">
+          <h2 class="title">Spec + Example Configs</h2>
+          <div class="muted" style="margin-bottom:10px;">Fill `satellite-spec.sample.yml` or `.json`, then I can generate your real hosts/profile/playbook templates.</div>
+          <div id="samples"></div>
+        </section>
+      </section>
+    </div>
+
+    <script>
+      const els = {
+        asof: document.getElementById('asof'), refresh: document.getElementById('refresh'), init: document.getElementById('init'), render: document.getElementById('render'), plan: document.getElementById('plan'),
+        kpis: document.getElementById('kpis'), runtime: document.getElementById('runtime'), lastRender: document.getElementById('last-render'), lastSync: document.getElementById('last-sync'),
+        output: document.getElementById('action-output'), runPlans: document.getElementById('run-plans'), runPlanDetail: document.getElementById('run-plan-detail'), samples: document.getElementById('samples'),
+        satSourceFilter: document.getElementById('sat-source-filter'), satMeta: document.getElementById('sat-meta'), satFileMeta: document.getElementById('sat-file-meta'), satRows: document.getElementById('sat-rows')
+      };
+      let overviewCache = null;
+
+      const fmt = (v) => (v == null || v === '' ? '-' : String(v));
+      const j = (v) => JSON.stringify(v, null, 2);
+      const escapeHtml = (s) => String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+
+      function setOutput(obj, isError = false) {
+        els.output.classList.toggle('error', !!isError);
+        els.output.classList.toggle('muted', !isError);
+        els.output.textContent = typeof obj === 'string' ? obj : j(obj);
+      }
+
+      async function api(path, method = 'GET') {
+        const res = await fetch(path, { method, headers: { 'Content-Type': 'application/json' } });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+      }
+
+      function renderKpis(data) {
+        const runPlans = data.recent_run_plans || [];
+        const generated = data.recent_generated || [];
+        const sat = data.satellites || {};
+        const combinedSummary = sat.combined?.summary || {};
+        const cards = [
+          ['Satellites (Combined)', combinedSummary.total ?? 0],
+          ['Enabled', combinedSummary.enabled ?? 0],
+          ['Disabled', combinedSummary.disabled ?? 0],
+          ['Run Plans', runPlans.length],
+          ['Generated Bundles', generated.length],
+          ['Spec Samples', ((data.samples?.satellite_spec_json?.exists) && (data.samples?.satellite_spec_yml?.exists)) ? 'ready' : 'partial'],
+        ];
+        els.kpis.innerHTML = cards.map(([label, value]) => `<div class="kpi"><div class="label">${label}</div><div class="value">${value}</div></div>`).join('');
+      }
+
+      function renderRunPlans(data) {
+        const plans = data.recent_run_plans || [];
+        if (!plans.length) {
+          els.runPlans.innerHTML = '<div class="muted">No run plans yet. Click "Plan Example Run".</div>';
+          return;
+        }
+        els.runPlans.innerHTML = plans.map((p) => {
+          const meta = p.metadata || {};
+          const dir = p._dir || 'unknown';
+          return `<button data-dir="${dir}"><span class="mono">${dir}</span><br><span class="muted">${fmt(meta.profile)} · ${(meta.hosts || []).join(', ') || '-'}</span></button>`;
+        }).join('');
+        [...els.runPlans.querySelectorAll('button[data-dir]')].forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            try {
+              const dir = btn.getAttribute('data-dir');
+              const plan = await api(`/api/run-plan?dir=${encodeURIComponent(dir)}`);
+              els.runPlanDetail.textContent = j(plan);
+              els.runPlanDetail.classList.remove('error');
+              els.runPlanDetail.classList.add('muted');
+            } catch (e) {
+              els.runPlanDetail.textContent = String(e);
+              els.runPlanDetail.classList.add('error');
+            }
+          });
+        });
+      }
+
+      function renderSamples(data) {
+        const samples = data.samples || {};
+        const keys = [
+          ['satellite_spec_yml', 'Satellite Spec (YAML)'],
+          ['satellite_spec_json', 'Satellite Spec (JSON)'],
+          ['hosts_example', 'Hosts Example'],
+          ['profile_example', 'Profile Example'],
+        ];
+        els.samples.innerHTML = keys.map(([key, label]) => {
+          const item = samples[key] || {};
+          const body = item.text ? item.text : (item.json ? j(item.json) : (item.error || 'Missing'));
+          return `<details><summary>${label} <span class="mono muted">${fmt(item.path)}</span></summary><pre class="log" style="max-height:180px; margin-top:8px;">${escapeHtml(body)}</pre></details>`;
+        }).join('');
+      }
+
+      function formatCounter(counter) {
+        const entries = Object.entries(counter || {});
+        if (!entries.length) return '-';
+        return entries.map(([k,v]) => `${k}:${v}`).join(' · ');
+      }
+
+      function selectedSatelliteView(sat) {
+        const mode = els.satSourceFilter.value;
+        if (mode === 'registry') return sat.registry || { summary:{}, rows:[] };
+        if (mode === 'spec_json') return sat.spec_json || { summary:{}, rows:[] };
+        return sat.combined || { summary:{}, rows:[] };
+      }
+
+      function renderSatelliteSnapshot(data) {
+        const sat = data.satellites || {};
+        const view = selectedSatelliteView(sat);
+        const summary = view.summary || {};
+        const rows = view.rows || [];
+
+        const duplicateText = (summary.duplicate_names || []).length ? `duplicates: ${(summary.duplicate_names || []).join(', ')}` : 'duplicates: none';
+        els.satMeta.innerHTML = [
+          `total ${fmt(summary.total ?? 0)}`,
+          `enabled ${fmt(summary.enabled ?? 0)}`,
+          `disabled ${fmt(summary.disabled ?? 0)}`,
+          `groups ${formatCounter(summary.group_counts)}`,
+          `env ${formatCounter(summary.environment_counts)}`,
+          `transport ${formatCounter(summary.transport_counts)}`,
+          `auth ${formatCounter(summary.auth_type_counts)}`,
+          duplicateText,
+        ].map((t) => `<span class="chip">${escapeHtml(t)}</span>`).join('');
+
+        const fileMap = sat.files || {};
+        els.satFileMeta.innerHTML = Object.entries(fileMap).map(([name, meta]) => {
+          const bits = [name, meta.exists ? 'present' : 'missing'];
+          if (meta.size_bytes != null) bits.push(`${meta.size_bytes} bytes`);
+          return `<span class="chip"><span class="mono">${escapeHtml(bits.join(' · '))}</span></span>`;
+        }).join('');
+
+        if (!rows.length) {
+          els.satRows.innerHTML = '<tr><td colspan="8" class="muted">No satellite rows found for this source.</td></tr>';
+          return;
+        }
+
+        els.satRows.innerHTML = rows.map((r) => {
+          const enabled = r.enabled !== false;
+          const groups = (r.groups || []).join(', ');
+          const osAuth = [r.os_family, r.os_distribution, r.transport, r.auth_type].filter(Boolean).join(' · ');
+          const appMeta = [r.remote_app_path, r.app_port != null ? `:${r.app_port}` : null].filter(Boolean).join(' ');
+          return `
+            <tr>
+              <td><span class="mono">${escapeHtml(fmt(r.name))}</span></td>
+              <td><span class="pill">${escapeHtml(fmt(r.source))}</span></td>
+              <td><span class="status-pill ${enabled ? 'status-on' : 'status-off'}">${enabled ? 'enabled' : 'disabled'}</span></td>
+              <td class="mono">${escapeHtml(fmt(r.host))}${r.port ? `:${escapeHtml(String(r.port))}` : ''}</td>
+              <td>${escapeHtml(fmt(r.user))}</td>
+              <td>${escapeHtml(groups || '-')}${r.environment ? `<div class="small muted">env: ${escapeHtml(String(r.environment))}</div>` : ''}</td>
+              <td>${escapeHtml(osAuth || '-')}</td>
+              <td>${escapeHtml(appMeta || '-')}</td>
+            </tr>`;
+        }).join('');
+      }
+
+      function renderOverview(data) {
+        overviewCache = data;
+        els.asof.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+        els.runtime.textContent = fmt(data.app?.runtime);
+        els.lastRender.textContent = fmt(data.state?.last_render?.at);
+        els.lastSync.textContent = fmt(data.state?.last_sync?.at);
+        renderKpis(data);
+        renderSatelliteSnapshot(data);
+        renderRunPlans(data);
+        renderSamples(data);
+      }
+
+      async function refreshOverview() {
+        try {
+          const data = await api('/api/overview');
+          renderOverview(data);
+        } catch (e) {
+          setOutput(String(e), true);
+        }
+      }
+
+      async function runAction(path) {
+        try {
+          setOutput(`Running ${path} ...`);
+          const data = await api(path, 'POST');
+          setOutput(data);
+          await refreshOverview();
+        } catch (e) {
+          setOutput(String(e), true);
+        }
+      }
+
+      els.refresh.addEventListener('click', refreshOverview);
+      els.init.addEventListener('click', () => runAction('/api/actions/init'));
+      els.render.addEventListener('click', () => runAction('/api/actions/render-example'));
+      els.plan.addEventListener('click', () => runAction('/api/actions/plan-example'));
+      els.satSourceFilter.addEventListener('change', () => { if (overviewCache) renderSatelliteSnapshot(overviewCache); });
+
+      refreshOverview();
+      setInterval(refreshOverview, 30000);
+    </script>
+  </body>
+</html>
