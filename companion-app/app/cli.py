@@ -1,8 +1,8 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from .config import ensure_paths, get_paths, read_state, utc_now, write_state
 from .gitops import execute_git_sync, plan_git_sync

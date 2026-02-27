@@ -1,1 +1,1 @@
-﻿"""Companion app package."""
+"""Companion app package."""

@@ -1,10 +1,10 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 import json
 import shlex
 import subprocess
+from dataclasses import dataclass
+from pathlib import Path
 
 from .models import Profile
 

@@ -1,9 +1,9 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import argparse
+import json
 from collections import Counter
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-import json
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, unquote
@@ -297,6 +297,7 @@ def _plan_with_examples() -> dict[str, Any]:
         "profile_name": profile.name,
     }
 
+
 def _overview() -> dict[str, Any]:
     paths = get_paths()
     ensure_paths(paths)
@@ -404,5 +405,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-

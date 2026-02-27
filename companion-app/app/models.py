@@ -1,9 +1,9 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-import json
 
 
 @dataclass
@@ -80,4 +80,3 @@ def load_profile(path: Path) -> Profile:
         ansible_limit=(str(raw["ansible_limit"]) if raw.get("ansible_limit") else None),
         check_mode_default=bool(raw.get("check_mode_default", True)),
     )
-

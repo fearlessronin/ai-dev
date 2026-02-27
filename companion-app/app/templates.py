@@ -1,7 +1,7 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-from pathlib import Path
 import json
+from pathlib import Path
 
 from .models import Host, Profile
 
@@ -60,15 +60,11 @@ def render_templates(
     inventory_tpl = _read_template(templates_root / Path(inventory_template_rel).name)
     vars_tpl = _read_template(templates_root / Path(vars_template_rel).name)
 
-    inventory_text = (
-        inventory_tpl
-        .replace("{{PROFILE_NAME}}", profile.name)
-        .replace("{{HOSTS_YAML}}", _indent(build_hosts_yaml(hosts), 6))
+    inventory_text = inventory_tpl.replace("{{PROFILE_NAME}}", profile.name).replace(
+        "{{HOSTS_YAML}}", _indent(build_hosts_yaml(hosts), 6)
     )
-    vars_text = (
-        vars_tpl
-        .replace("{{PROFILE_NAME}}", profile.name)
-        .replace("{{PROFILE_JSON_VARS}}", _indent(build_group_vars_yaml(profile), 2))
+    vars_text = vars_tpl.replace("{{PROFILE_NAME}}", profile.name).replace(
+        "{{PROFILE_JSON_VARS}}", _indent(build_group_vars_yaml(profile), 2)
     )
 
     inventory_out = output_dir / "inventory.generated.yml"

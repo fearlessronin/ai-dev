@@ -1,9 +1,9 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 import json
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -40,7 +40,7 @@ def ensure_paths(paths: AppPaths) -> None:
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def read_state(paths: AppPaths) -> dict:
