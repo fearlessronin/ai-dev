@@ -189,6 +189,10 @@ python -m cve_agent.cli serve --poll --poll-interval-minutes 30 --host 127.0.0.1
 
 Open `http://127.0.0.1:8080`.
 
+Feed Analytics POC page:
+- Open `http://127.0.0.1:8080/assets/feed-analytics-poc.html`
+- The main dashboard and analytics POC include links to each other for quick navigation.
+
 Serve polling flags:
 - `--poll`: enable background polling while the dashboard is running.
 - `--poll-interval-minutes`: override polling cadence at startup (applies to `daemon` and `serve --poll`).
